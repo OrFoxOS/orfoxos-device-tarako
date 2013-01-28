@@ -16,7 +16,7 @@
 #include "cutils/sockets.h"
 #include "cutils/properties.h"
 
-#define ENG_MAX_RW_SIZE            2048
+#define ENG_MAX_RW_SIZE            (2048-20)
 
 #define ENG_MAX_CONNECT_NUM       60
 #define ENG_MAX_CLIENT_NAME_LEN   20
@@ -29,7 +29,7 @@ struct eng_client_info{
 
 struct eng_client_info client_info[ENG_MAX_CONNECT_NUM];
 
-static int monitor_svc_fd = 0;
+static int monitor_svc_fd = -1;
 static char eng_read_buf[ENG_MAX_RW_SIZE] = {0};
 static char eng_write_buf[ENG_MAX_RW_SIZE] = {0};
 
@@ -122,7 +122,7 @@ static void client_info_update(fdevent* fe,char* name, int type)
 			client_info[i].fe = fe;
 			client_info[i].type = type;
 			memcpy(client_info[i].name, name, strlen(name));
-			ENG_LOG("%s: name[%d] %s, fd=%s\n",__func__, i, client_info[i].name,client_info[i].fe);
+			ENG_LOG("%s: name[%d] %s,\n",__func__, i, client_info[i].name);
 			break;
 		}
 	}
@@ -131,7 +131,7 @@ static int client_info_gettype(int fd)
 {
 	int i;
 	for (i=0; i<ENG_MAX_CONNECT_NUM; i++) {
-		ENG_LOG("%s:[%d] fd=%d; client_info[i].fe=%x\n",__func__, i, fd, client_info[i].fe);
+		ENG_LOG("%s:[%d] fd=%d;\n",__func__, i, fd);
 		if (client_info[i].fe != NULL){
 			if (fd == client_info[i].fe->fd) {
 				ENG_LOG("%s: [%d].name=%s; .type=%d\n",__func__, i, client_info[i].name, client_info[i].type);
@@ -151,7 +151,7 @@ static int client_info_get_socketid(char* name)
 			return client_info[i].fe->fd ;			
 		}
 	}
-	return 0;
+	return -1;
 }
 
 static fdevent* client_info_get_sockefd(int fd)
@@ -208,6 +208,7 @@ static int eng_event_unreg(int fd)
 			break;
 		}
 	}
+	close(fd);
 
 	if(i>=ENG_MAX_CONNECT_NUM)
 		return -1;
@@ -235,8 +236,18 @@ static int eng_event_reg(int fd)
 		return -1;
 	}
 
+
 	memset(regname, 0, ENG_MAX_CLIENT_NAME_LEN);
 	type = clinet_info_getnametype(eng_read_buf, regname);
+
+	if (monitor_svc_fd < 0
+			&& ( strncmp((const char*)regname,ENG_MONITOR,strlen(ENG_MONITOR)) != 0)){
+		memset(eng_write_buf, 0, ENG_MAX_RW_SIZE);
+		memcpy(eng_write_buf, ENG_DESTERROR, ENG_MAX_RW_SIZE);
+		eng_write(fd, eng_write_buf, strlen(eng_write_buf));
+		close(fd);
+		return -1;
+	}
 
 	func = getclientfunc(fd, regname);
 	if (func==NULL){
@@ -265,7 +276,8 @@ static int eng_event_reg(int fd)
 
 static void setup_send_data(int fd, int type, char *inbuf, char *outbuf)
 {
-	sprintf(outbuf, "%d;%d;%s", fd, type, inbuf);
+	/*fd max=43892 /proc/sys/fs/file-max */
+	sprintf(outbuf, "%5d;%5d;%d;%s",6+6+2+strlen(inbuf), fd, type, inbuf);
 	ENG_LOG("%s:fd=%d; type=%d; inbuf=%s; outbuf=%s", __func__, fd, type, inbuf, outbuf);
 }
 
@@ -446,7 +458,7 @@ static void  appclient_event_func(int _fd, unsigned ev, void *_l)
 		if(ret==0) {
 			//client disconnect
 			eng_event_unreg(_fd);
-		} else if(dest_fd>0) {
+		} else if(dest_fd>=0) {
 			//data parse
 			memset(eng_write_buf, 0, ENG_MAX_RW_SIZE);
 			if (0 == strncmp(eng_read_buf,"CMD:",strlen("CMD:"))){
@@ -489,7 +501,7 @@ static void modemclient_event_func(int _fd, unsigned ev, void *_l)
 		if(ret==0) {
 			//client disconnect
  			eng_event_unreg(_fd);
- 		} else if(dest_fd>0){
+ 		} else if(dest_fd>=0){
 			//data parse
 			length = strlen(eng_write_buf);
 			ENG_LOG("%s: write %s to %d, lenght=%d",__func__, eng_write_buf, dest_fd, length);
@@ -636,7 +648,8 @@ int main(void)
 			continue;
 		}
 
-		eng_event_reg(n);
+		if ( eng_event_reg(n) < 0 )
+			continue;
 		
 		if (0 == has_thread){
 			if (0 != eng_thread_create( &t2, eng_svc_thread, (void *)n)){
