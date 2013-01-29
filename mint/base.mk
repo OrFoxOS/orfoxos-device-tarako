@@ -47,6 +47,7 @@ PRODUCT_PACKAGES := \
 	rawdatad \
 	nvm_daemon \
 	modemd \
+	usbmond \
 	mfserial
 
 # own copyright packages files

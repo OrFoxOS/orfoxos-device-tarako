@@ -139,6 +139,9 @@ endif
 ifeq ($(USE_BOOT_AT_DIAG),true)
 LOCAL_CFLAGS += -DUSE_BOOT_AT_DIAG
 endif
+ifeq ($(strip $(USE_ENG_UART_USB_AUTO)),true)
+LOCAL_CFLAGS += -DCONFIG_ENG_UART_USB_AUTO
+endif
 
 LOCAL_C_INCLUDES    +=  external/sqlite/dist/
 
@@ -187,6 +190,22 @@ LOCAL_SRC_FILES     := eng_setbtwifiaddr.c   \
 LOCAL_MODULE := engsetmacaddr
 
 LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+
+LOCAL_PRELINK_MODULE    := false
+
+LOCAL_SRC_FILES := \
+        usbmon.c
+
+LOCAL_SHARED_LIBRARIES := \
+        libcutils
+
+LOCAL_MODULE := usbmond
+
+LOCAL_MODULE_TAGS := optional
+
 include $(BUILD_EXECUTABLE)
 
 

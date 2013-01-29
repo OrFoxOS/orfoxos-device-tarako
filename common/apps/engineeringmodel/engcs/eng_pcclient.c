@@ -25,6 +25,7 @@
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
 static int pc_client_fd = -1;
+
 static char eng_rspbuf[ENG_BUFFER_SIZE];
 static char eng_atautobuf[ENG_BUFFER_SIZE];
 static void *eng_atauto_thread(void *par);
@@ -40,22 +41,124 @@ static const char* TO_MULTI_SIM_CMDS[] = {
 	"AT+SFUN=5"
 };
 
+#ifdef CONFIG_ENG_UART_USB_AUTO
+static int printk_fd = -1;
+
+void eng_enable_kmsg(int enable)
+{
+	char log_level;
+
+	printk_fd = open("/proc/sys/kernel/printk", O_RDWR);
+	if (printk_fd == -1) {
+		ALOGE("Open sysfs printk error. %s", strerror(errno));
+		return;
+	}
+
+	log_level = (enable ? '8' : '0');
+
+	write(printk_fd, &log_level, 1);
+
+	close(printk_fd);
+}
+
+
+static int eng_pcclient_open_uart_device(void)
+{
+        struct termios termio;
+	int uart_fd = -1;
+	const char* uart_devname = "/dev/ttyS1";
+
+        /* uart device */
+        uart_fd = open(uart_devname, O_RDWR);
+        if(uart_fd < 0){
+                ALOGE("%s: open %s failed [%s]\n", __func__, uart_devname, strerror(errno));
+                return -1;
+        }
+
+        /* set uart parameters: 115200n8n1 */
+        tcgetattr(uart_fd, &termio);
+        cfsetispeed(&termio, (speed_t)B115200);
+        cfsetospeed(&termio, (speed_t)B115200);
+        termio.c_cflag &= ~PARENB;
+        termio.c_cflag &= ~CSIZE;
+        termio.c_cflag |= CS8;
+        termio.c_cflag &= ~CSTOPB;
+        tcsetattr(uart_fd, TCSAFLUSH, &termio);
+
+	dup2(uart_fd, 0);
+	dup2(uart_fd, 1);
+	dup2(uart_fd, 2);
+
+	return uart_fd;
+}
+
+
+static int eng_pcclient_open_device()
+{
+	int usb_state_fd;
+	int port_fd;
+
+	int ret;
+	char state[32] = {0};
+	struct termios ser_settings;
+
+	usb_state_fd = open(ENG_USBIN, O_RDONLY);
+	if (usb_state_fd == -1) {
+		ALOGE("open sysfs failed");
+		exit(1);
+	}
+	memset(state, 0, sizeof(state));
+	lseek(usb_state_fd, 0, SEEK_SET);
+
+	ret = read(usb_state_fd, state, sizeof(state));
+	if (ret > 0 && strncmp(state, ENG_USBCONNECTD, strlen(ENG_USBCONNECTD)) == 0) {
+		ALOGD("USB connected, open gser device");
+		port_fd = open(PC_GSER_DEV, O_RDWR);
+
+		tcgetattr(port_fd, &ser_settings);
+		cfmakeraw(&ser_settings);
+
+		//tcsetattr(port_fd, TCSANOW, &ser_settings);
+	}
+	else{
+		ALOGD("USB disconnected, open uart device");
+
+		eng_enable_kmsg(0);
+
+		port_fd = eng_pcclient_open_uart_device();
+	}
+
+	if(port_fd < 0){
+		ENG_LOG("%s: open device fail [%s]\n",__FUNCTION__,  strerror(errno));
+		return -1;
+	}
+
+	return port_fd;
+}
+
+#endif
+
 static int eng_pcclient_init(void)
 {
 	int i;
 	struct termios ser_settings;
 
-	pc_client_fd = open(PC_GSER_DEV, O_RDWR); 
+#ifdef CONFIG_ENG_UART_USB_AUTO
+	pc_client_fd = eng_pcclient_open_device();
 	
+#else
+	pc_client_fd = open(PC_GSER_DEV, O_RDWR);
+
 	if(pc_client_fd < 0){
 		ENG_LOG("%s: open %s fail [%s]\n",__FUNCTION__, PC_GSER_DEV, strerror(errno));
 		return -1;
 	}
-	
- 	tcgetattr(pc_client_fd, &ser_settings);
-	cfmakeraw(&ser_settings);
+       tcgetattr(pc_client_fd, &ser_settings);
+       cfmakeraw(&ser_settings);
 
-	//tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
+       //tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
+
+#endif
 	
 	for ( i=0;i<MAX_CS_SIMS;i++ ){
 		cs_sim_fds[i] = -1;
@@ -334,6 +437,16 @@ static void *eng_pcclient_hdlr(void *_param)
 
 		ENG_LOG("%s ### data read length %d %s###", __FUNCTION__, length,readbuf);
 
+#ifdef CONFIG_ENG_UART_USB_AUTO
+		if (!strncmp (readbuf, "sh", 2)) {
+			ENG_LOG("start shell\n");
+			eng_enable_kmsg(1);
+			system("/system/bin/sh");
+			eng_enable_kmsg(0);
+			ENG_LOG("back from shell\n");
+			continue;
+		}
+#endif
 		total = eng_dispatch_simfd_counts(readbuf);
 		for ( i=0;i<total;i ++ )
 		{
@@ -543,6 +656,17 @@ static void *eng_modemreset_thread(void *par)
 	close(pipe_fd);
 }
 
+
+static void property_set_check(const char *property, const char *value)
+{
+	char value_save[32] = {0};
+
+	property_get(property, value_save, NULL);
+	if (strcmp(value_save, value)){
+		property_set(property, value);
+	}
+}
+
 void eng_check_factorymode_fornand(void)
 {
 	int ret;
@@ -560,20 +684,20 @@ void eng_check_factorymode_fornand(void)
 		if(fd > 0)
 			close(fd);
 		if (strstr(config_property, "adb")) { 
-			property_set("sys.usb.config","adb,vser,gser");
-			property_set("persist.sys.usb.config","mass_storage,adb,vser,gser");
+			property_set_check("sys.usb.config","adb,vser,gser");
+			property_set_check("persist.sys.usb.config","mass_storage,adb,vser,gser");
 		} else {
-			property_set("sys.usb.config","vser,gser");
-			property_set("persist.sys.usb.config","vser,gser");
+			property_set_check("sys.usb.config","vser,gser");
+			property_set_check("persist.sys.usb.config","vser,gser");
 		}
 	} else if (status == 0) {
 		if (strstr(config_property, "vser,gser")) {
 			if (strstr(config_property, "adb")) {
-				property_set("sys.usb.config","adb");
-				property_set("persist.sys.usb.config","adb");
+				property_set_check("sys.usb.config","adb");
+				property_set_check("persist.sys.usb.config","adb");
 			} else {
-				property_set("sys.usb.config","");
-				property_set("persist.sys.usb.config","");
+				property_set_check("sys.usb.config","");
+				property_set_check("persist.sys.usb.config","");
 			}
 		} 
 		remove(ENG_FACOTRYMODE_FILE);
