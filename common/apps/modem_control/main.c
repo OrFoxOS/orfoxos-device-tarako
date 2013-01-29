@@ -6,6 +6,8 @@
 #include <cutils/sockets.h>
 #include <pthread.h>
 #include <utils/Log.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <errno.h>  
 #include <ctype.h>
 #include <dirent.h>	
@@ -312,8 +314,11 @@ int main(int argc, char *argv[])
 	int ret, i;
 	char buf[DATA_BUF_SIZE]={0};	
 	pthread_t t1;
+	int priority;
+	pid_t pid;
 	int modem_state_fd = open(MODEM_STATE_PATH, O_RDONLY);
 
+	printf(">>>>>> start modem manager program ......\n");
 	if(poweron_by_charger() == 1){
 		printf(">>>>>> power on by charger,modem_reboot exits...\n");
 		return 0;
@@ -323,7 +328,9 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	close(modem_state_fd);
-
+	pid = getpid();
+	priority = getpriority(PRIO_PROCESS,pid);
+	setpriority(PRIO_PROCESS,pid,-15);
 	{
                 extern int get_modem_images_info(void);
                 extern void print_modem_image_info(void);
@@ -331,8 +338,7 @@ int main(int argc, char *argv[])
                 print_modem_image_info();
 	}
 
-	//pthread_create(&t1, NULL, (void*)modemd_listenaccept_thread, NULL);
-	printf(">>>>>> start modem manager program ......\n");
+	pthread_create(&t1, NULL, (void*)modemd_listenaccept_thread, NULL);
 	
 	modem_state = MODEM_STA_INIT;
 	do{
