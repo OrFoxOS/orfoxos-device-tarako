@@ -51,6 +51,7 @@ void record_snap(struct slog_info *info)
 	struct stat st;
 	FILE *fcmd, *fp;
 	char buffer[4096];
+	char buffer_cmd[MAX_NAME_LEN];
 	time_t t;
 	struct tm tm;
 	int ret;
@@ -62,19 +63,6 @@ void record_snap(struct slog_info *info)
 		err_log("open file %s failed!", buffer);
 		exit(0);
 	}
-
-        if(!strncmp(info->opt, "file", 4)) {
-                fcmd = fopen(info->content, "r");
-        } else {
-                fcmd = popen(info->content, "r");
-        }
-
-	if(fcmd == NULL) {
-		err_log("open target %s failed!", info->content);
-		fclose(fp);
-		return;
-	}
-
 	/* add timestamp */
 	t = time(NULL);
 	localtime_r(&t, &tm);
@@ -86,16 +74,27 @@ void record_snap(struct slog_info *info)
 				tm.tm_min,
 				tm.tm_sec);
 
+        if(!strncmp(info->opt, "cmd", 3)) {
+		fclose(fp);
+		sprintf(buffer_cmd, "%s >> %s", info->content, buffer);
+		system(buffer_cmd);
+		return;
+	}
+
+	fcmd = fopen(info->content, "r");
+
+	if(fcmd == NULL) {
+		err_log("open target %s failed!", info->content);
+		fclose(fp);
+		return;
+	}
+
 	/* recording... */
 	while( (ret = fread(buffer, 1, 4096, fcmd)) > 0)
 		fwrite(buffer, 1, ret, fp);
 
 	fclose(fp);
-
-        if(!strncmp(info->opt, "file", 4))
-                fclose(fcmd);
-        else
-                pclose(fcmd);
+	fclose(fcmd);
 
 	return;
 }
@@ -452,7 +451,7 @@ static void obtime(char *src, int len)
 	gettimeofday(&tv, NULL);
 	tm = localtime_r(&when, &tmBuf);
 	ret = strftime(src, len, "%m-%d %H:%M:%S", tm);
-	sprintf(src + ret, ".%03d ", tv.tv_usec / 1000);
+	sprintf(src + ret, ".%03ld ", tv.tv_usec / 1000);
 	return;
 }
 
@@ -550,6 +549,105 @@ static void log_size_handler(struct slog_info *info)
 	}
 }
 
+static int write_from_buffer(int fd, char *buf, int len)
+{
+	int result = 0, err = 0;
+
+	if(buf == NULL || fd < 0)
+		return -1;
+
+	if(len <= 0)
+		return 0;
+
+	while(result < len) {
+		err = write(fd, buf + result, len - result);
+		if(err < 0 && errno == EINTR)
+			continue;
+		if(err < 0)
+			return err;
+		result += err;
+	}
+	return result;
+}
+
+void *modem_log_handler(void *arg)
+{
+	struct slog_info *info;
+	char buffer[LOGGER_ENTRY_MAX_LEN];
+	int err, ret, result, data_fd, circular_size = 0;
+
+	info = stream_log_head;
+	while (info) {
+		if (strncmp(info->name, "modem", 5)) {
+			info = info->next;
+			continue;
+		}
+		if (!strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
+			info->state = SLOG_STATE_OFF;
+
+		open_device(info, MODEM_LOG_SOURCE);
+
+		if(info->state == SLOG_STATE_ON)
+			info->fd_out = gen_outfd(info);
+		else
+			info->fd_out = -1;
+		
+		sprintf(buffer, "%s/modem", INTERNAL_LOG_PATH);
+		mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
+		sprintf(buffer, "%s/modem/modem.log", INTERNAL_LOG_PATH);
+		data_fd = open(buffer, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
+		if(data_fd < 0) {
+			err_log("open modem log failed!");
+			return NULL;
+		}
+		break;
+	}
+
+	if(info == NULL) {
+		err_log("modem log disabled!");
+		return NULL;
+	}
+
+	while(1) {
+		memset(buffer, 0, sizeof(buffer));
+		ret = read(info->fd_device, buffer, LOGGER_ENTRY_MAX_LEN);
+		if (ret <= 0) {
+			sleep(1);
+			err_log("read modem log failed!");
+			continue;
+		}
+		
+		/* write modem log to circular buffer in internal partition */
+		result = write_from_buffer(data_fd, buffer, ret);
+		circular_size += result;
+		if (circular_size >= MODEM_CIRCULAR_SIZE) {
+			char *file0, *file1;
+			asprintf(&file0, "%s/modem/modem.log", INTERNAL_LOG_PATH);
+			asprintf(&file1, "%s/modem/modem.log.1", INTERNAL_LOG_PATH);
+			err = rename (file0, file1);
+			if (err < 0 && errno != ENOENT)
+				err_log("while rotating log files");
+			data_fd = open(file0, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
+			if(data_fd < 0) {
+				err_log("open modem log failed!");
+				return NULL;
+			}
+			free(file1);
+			free(file0);
+			lseek(data_fd, 0, SEEK_SET);
+			circular_size = 0;
+		}
+
+		/* write modem log to SD card if enabled */
+		if (info->state == SLOG_STATE_ON) {
+			result = write_from_buffer(info->fd_out, buffer, ret);
+			info->outbytecount += result;
+			log_size_handler(info);
+		}
+	}
+	return NULL;
+}
+
 static AndroidLogFormat * g_logformat;
 
 void *stream_log_handler(void *arg)
@@ -577,13 +675,8 @@ void *stream_log_handler(void *arg)
 			open_device(info, KERNEL_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
 		} else if(!strncmp(info->name, "modem", 5)) {
-			if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) ) {
-				info->state = SLOG_STATE_OFF;
-				info = info->next;
-				continue;
-			}
-			open_device(info, MODEM_LOG_SOURCE);
-			info->fd_out = gen_outfd(info);
+			info = info->next;
+			continue;
 		} else if( !strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6) || !strncmp(info->name, "radio", 5) ){
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
 			open_device(info, devname);
@@ -661,25 +754,8 @@ void *stream_log_handler(void *arg)
 				info->outbytecount += ret;
 				log_size_handler(info);
 			} else if(!strncmp(info->name, "modem", 5)) {
-				memset(buf_kmsg, 0, LOGGER_ENTRY_MAX_LEN);
-				ret = read(info->fd_device, buf_kmsg, LOGGER_ENTRY_MAX_LEN);
-				if (ret == 0) {
-					close(info->fd_device);
-					open_device(info, MODEM_LOG_SOURCE);
-					info = info->next;
-					continue;
-				} else if (ret < 0) {
-					err_log("read %s log failed!", info->name);
-					info = info->next;
-					continue;
-				}
-
-				do {
-					result = write(info->fd_out, buf_kmsg, ret);
-				} while (result < 0 && errno == EINTR);
-
-				info->outbytecount += result;
-				log_size_handler(info);
+				info = info->next;
+				continue;
 			} else if(!strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6)
 				|| !strncmp(info->name, "radio", 5) ){
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);

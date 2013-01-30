@@ -69,6 +69,7 @@ void usage(const char *name)
                "\tclear       delete all log.\n"
                "\tdump [file] dump all log to a tar file.\n"
                "\tscreen [file] screen shot, if no file given, will be put into misc dir\n"
+               "\thook_modem  dump current modem log to /data/log\n"
                "\tquery       print the current slog configuration.\n");
 	return;
 }
@@ -91,6 +92,7 @@ int main(int argc, char *argv[])
 	clear		CTRL_CMD_TYPE_CLEAR,
 	dump		CTRL_CMD_TYPE_DUMP,
 	screen		CTRL_CMD_TYPE_SCREEN,
+	hook_modem	CTRL_CMD_TYPE_HOOK_MODEM,
 	*/
 	if(argc < 2) {
 		usage(argv[0]);
@@ -134,6 +136,8 @@ int main(int argc, char *argv[])
 			snprintf(cmd.content, MAX_NAME_LEN, "%s", argv[2]);
 	} else if(!strncmp(argv[1], "query", 5)) {
 		cmd.type = CTRL_CMD_TYPE_QUERY;
+	} else if(!strncmp(argv[1], "hook_modem", 10)) {
+		cmd.type = CTRL_CMD_TYPE_HOOK_MODEM;
 	} else {
 		usage(argv[0]);
 		return 0;

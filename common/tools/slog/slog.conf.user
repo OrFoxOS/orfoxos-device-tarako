@@ -3,18 +3,18 @@ disable
 
 #type	name		value
 var	logpath		external
-var	screenshot	enable
+var	screenshot	disable
 var	slogsaveall	off
 
 #type	name	state	size	level
-stream	kernel	on	0	7
-stream	system	on	0	8
-stream	radio	on	0	0
-stream	modem	off	0	5
-stream	main	on	0	7
+stream	kernel	off	0	7
+stream	system	off	0	8
+stream	radio	off	0	0
+stream	modem	on	0	5
+stream	main	off	0	7
 stream	wifi	off	0	7
 stream	bt	off	0	7
-misc	misc	on	0	5
+misc	misc	off	0	5
 
 #type	name		opt	level	inter	action
 snap	meminfo		file	6	300	/proc/meminfo
@@ -27,7 +27,7 @@ snap	apanic_console	file	7	0	/data/dontpanic/apanic_console
 snap	apanic_threads	file	7	0	/data/dontpanic/apanic_threads
 snap	ps		cmd	6	300	ps -t
 snap	df		cmd	6	300	df
-snap	procrank	cmd	6	300	procrank
+snap	procrank	cmd	9	300	procrank
 snap	bugreport	cmd	9	0	bugreport
 snap	getprop		cmd	9	0	getprop
 snap	dumpsys		cmd	9	0	dumpsys

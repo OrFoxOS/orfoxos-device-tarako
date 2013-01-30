@@ -40,6 +40,7 @@ int stream_log_handler_started = 0;
 int snapshot_log_handler_started = 0;
 int notify_log_handler_started = 0;
 int bt_log_handler_started = 0;
+int modem_log_handler_started = 0;
 
 int internal_log_size = 10; /*M*/
 
@@ -52,17 +53,93 @@ char external_path[MAX_NAME_LEN];
 struct slog_info *stream_log_head, *snapshot_log_head;
 struct slog_info *notify_log_head, *misc_log;
 
-pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid;
+pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, modem_tid;
 
-
-void exec_or_dump_content(struct slog_info *info, char *filepath)
+static void handler_exec_cmd(struct slog_info *info, char *filepath)
 {
-	struct stat st;
+	FILE *fp;
+	char buffer[MAX_NAME_LEN];
+	int ret;
+	time_t t;
+	struct tm tm;
+
+	fp = fopen(filepath, "a+");
+	if(fp == NULL) {
+		err_log("open file %s failed!", filepath);
+		return;
+	}
+
+        /* add timestamp */
+        t = time(NULL);
+        localtime_r(&t, &tm);
+        fprintf(fp, "\n============ %s  %02d-%02d-%02d %02d:%02d:%02d  ==============\n",
+				info->log_basename,
+				tm.tm_year % 100,
+				tm.tm_mon + 1,
+				tm.tm_mday,
+				tm.tm_hour,
+				tm.tm_min,
+				tm.tm_sec);
+	fclose(fp);
+
+	sprintf(buffer, "%s >> %s", info->content, filepath);
+	system(buffer);
+	return;
+
+}
+
+static void handler_dump_file(struct slog_info *info, char *filepath)
+{
 	FILE *fcmd, *fp;
 	int ret;
 	time_t t;
 	struct tm tm;
 	char buffer[4096];
+
+	fp = fopen(filepath, "a+");
+	if(fp == NULL) {
+		err_log("open file %s failed!", filepath);
+		return;
+	}
+
+	fcmd = fopen(info->content, "r");
+	if(fcmd == NULL) {
+		err_log("open target %s failed!", info->content);
+		fclose(fp);
+		return;
+	}
+
+	/* add timestamp */
+        t = time(NULL);
+        localtime_r(&t, &tm);
+        fprintf(fp, "\n============ %s  %02d-%02d-%02d %02d:%02d:%02d  ==============\n",
+				info->log_basename,
+				tm.tm_year % 100,
+				tm.tm_mon + 1,
+				tm.tm_mday,
+				tm.tm_hour,
+				tm.tm_min,
+				tm.tm_sec);
+	/* recording... */
+	while( (ret = fread(buffer, 1, 4096, fcmd)) > 0)
+		fwrite(buffer, 1, ret, fp);
+
+	/*Separate treating apanic, copy after delete apanic*/
+	if(!strncmp("apanic_console", info->name, 14) || !strncmp("apanic_threads", info->name, 14)){
+		sprintf(buffer, "rm -r %s", info->content);
+		system(buffer);
+	}
+
+	fclose(fcmd);
+	fclose(fp);
+
+	return;
+}
+
+void exec_or_dump_content(struct slog_info *info, char *filepath)
+{
+	int ret;
+	char buffer[MAX_NAME_LEN];
 
 	/* slog_enable on/off state will control all snapshot log */
 	if(slog_enable == 0)
@@ -71,20 +148,6 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 	/* misc_log on/off state will control all snapshot log */
 	if(misc_log->state != SLOG_STATE_ON)
 		return;
-
-	/*Separate treating bugreprot*/
-	if(!strncmp("bugreport", info->content, 9)) {
-		sprintf(buffer, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
-		ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
-		if(-1 == ret && (errno != EEXIST)){
-			err_log("mkdir %s failed.", buffer);
-			exit(0);
-		}
-		sprintf(buffer, "bugreport >> %s/%s/%s/%s.log",
-			current_log_path, top_logdir, info->log_path, info->log_basename);
-		system(buffer);
-		return;
-	}
 
 	/* setup log file first */
 	if( filepath == NULL ) {
@@ -100,51 +163,10 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 		strcpy(buffer, filepath);
 	}
 
-	fp = fopen(buffer, "a+");
-	if(fp == NULL) {
-		err_log("open file %s failed!", buffer);
-		return;
-	}
-
-	if(!strncmp(info->opt, "file", 4)) {
-		fcmd = fopen(info->content, "r");
+	if(!strncmp(info->opt, "cmd", 3)) {
+		handler_exec_cmd(info, buffer);
 	} else {
-		fcmd = popen(info->content, "r");
-	}
-
-	if(fcmd == NULL) {
-		err_log("open target %s failed!", info->content);
-		fclose(fp);
-		return;
-	}
-
-        /* add timestamp */
-        t = time(NULL);
-        localtime_r(&t, &tm);
-        fprintf(fp, "\n============ %s  %02d-%02d-%02d %02d:%02d:%02d  ==============\n",
-				info->log_basename,
-				tm.tm_year % 100,
-				tm.tm_mon + 1,
-				tm.tm_mday,
-				tm.tm_hour,
-				tm.tm_min,
-				tm.tm_sec);
-
-	/* recording... */
-	while( (ret = fread(buffer, 1, 4096, fcmd)) > 0)
-		fwrite(buffer, 1, ret, fp);
-
-	if(!strncmp(info->opt, "file", 4))
-		fclose(fcmd);
-	else
-		pclose(fcmd);
-
-	fclose(fp);
-
-	/*Separate treating apanic, copy after delete apanic*/
-	if(!strncmp("apanic_console", info->name, 14) || !strncmp("apanic_threads", info->name, 14)){
-		sprintf(buffer, "rm -r %s", info->content);
-		system(buffer);
+		handler_dump_file(info, buffer);
 	}
 
 	return;
@@ -153,6 +175,7 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 int capture_by_name(struct slog_info *head, const char *name, char *filepath)
 {
 	struct slog_info *info = head;
+
 	while(info) {
 		if(!strncmp(info->name, name, strlen(name))) {
 			exec_or_dump_content(info, filepath);
@@ -209,7 +232,7 @@ static int capture_all(struct slog_info *head)
 	);
 
 	while(info) {
-		if(info->level == 6)
+		if(info->level <= 6)
 			exec_or_dump_content(info, filepath);
 		info = info->next;
 	}
@@ -384,6 +407,8 @@ static int start_sub_threads()
 		pthread_create(&notify_tid, NULL, notify_log_handler, NULL);
 	if(!bt_log_handler_started)
 		pthread_create(&bt_tid, NULL, bt_log_handler, NULL);
+	if(!modem_log_handler_started)
+		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
 	return 0;
 }
 
@@ -651,6 +676,7 @@ void *command_handler(void *arg)
 	struct sockaddr_un serv_addr;
         int ret, server_sock, client_sock;
 	char filename[MAX_NAME_LEN];
+	struct stat st;
 	time_t t;
 	struct tm tm;
 
@@ -726,6 +752,28 @@ void *command_handler(void *arg)
 			break;
 		case CTRL_CMD_TYPE_DUMP:
 			ret = dump_all_log(cmd.content);
+			break;
+		case CTRL_CMD_TYPE_HOOK_MODEM:
+			ret = mkdir("/data/log", S_IRWXU | S_IRWXG | S_IRWXO);
+			if (-1 == ret && (errno != EEXIST)){
+				err_log("mkdir /data/log failed.");
+			}
+			if(stat(HOOK_MODEM_TARGET_DIR, &st)) {
+				err_log("%s doesn't exsit!", HOOK_MODEM_TARGET_DIR);
+				break;
+			}
+			sprintf(filename, "%s/modem", INTERNAL_LOG_PATH);
+			if(chdir(filename) == -1) {
+				err_log("chdir %s failed!", filename);
+				break;
+			}
+			if(stat("modem.log", &st) != 0)
+				break;
+			ret = 0;
+			system("tar c modem.log | tar x -C /data/log");
+			if(stat("modem.log.1", &st) != 0)
+				break;
+			system("tar c modem.log.1 | tar x -C /data/log");
 			break;
 		case CTRL_CMD_TYPE_SCREEN:
 			if(slog_enable == 0)
