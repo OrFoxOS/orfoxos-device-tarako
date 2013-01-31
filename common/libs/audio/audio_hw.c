@@ -13,13 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#define SEC_CHANGES_FOR_MINT
 
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef ENG_MODE
-#define LOG_NDEBUG 0
-#endif
-#endif // SEC_CHANGES_FOR_MINT 
 #define LOG_TAG "audio_hw_primary"
 /*#define LOG_NDEBUG 0*/
 
@@ -54,35 +48,6 @@
 #include "eng_audio.h"
 #include "aud_proc.h"
 
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-#include "LVVEFS.h"
-#include "LVVE_EngineWrapper.h"
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SAMSUNGRECORD
-#include "wrap_samsungREC.h"
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_RESAMPLER_RECORD
-#include "wrap_downsampler.h"
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-// Parameters of setSoundSolution()
-#include "wrap_soundbooster.h"
-
-#define NO_ERROR 0
-
-#define    LM_READ    0x1
-#define    EQ_READ    0x2
-#define    SOUNDBOOSTER_READ    0x4
-#define    ACOUSTICEQ_READ        0x8
-
-#define    SOUNDBOOSTER_DISABLE    0x10
-#define    SOUNDBOOSTER_ENABLE    0x12    // Enable mode is 2
-#define    ACOUSTICEQ_DISABLE    0x20
-#define    ACOUSTICEQ_ENABLE     0x21
-#endif 
-#endif //SEC_CHANGES_FOR_MINT
-
 //#define XRUN_DEBUG
 
 #ifdef XRUN_DEBUG
@@ -98,16 +63,6 @@
 #define PRIVATE_NAME_LEN 60
 
 #define CTL_TRACE(exp) ALOGW(#exp" is %s", ((exp) != NULL) ? "successful" : "failure")
-
-#ifdef SEC_CHANGES_FOR_MINT
-#define NREC_DEVICE(d) (d & (AUDIO_DEVICE_OUT_BLUETOOTH_SCO|AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET| \
-						AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT|AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
-
-#ifdef ENG_MODE
-bool dumpSwitch[] = {false, false, false, false};
-static unsigned int dumpFileNumber;
-#endif
-#endif // SEC_CHANGES_FOR_MINT
 
 #define PRIVATE_MIC_BIAS                  "mic bias"
 #define PRIVATE_VBC_CONTROL              "vb control"
@@ -263,24 +218,6 @@ struct tiny_audio_device {
     bool eq_available;
 
     struct stream_routing_manager  routing_mgr;
-
-#ifdef SEC_CHANGES_FOR_MINT
-	//Added for loop_test
-    bool test_loop_on;
-	//Added for loop_test end
-    int factoryTestDev;
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-			void					*mLVVE_Engine;
-			int32_t 				mLVVE_Capabilities;
-			int32_t 				mInputRunning;
-			int32_t 				mOutputRunning;
-			int 					mIsRealCall;
-#endif
-
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_FMRADIO
-    bool bFmMode;
-#endif
-#endif //SEC_CHANGES_FOR_MINT
 };
 
 struct tiny_stream_out {
@@ -300,20 +237,6 @@ struct tiny_stream_out {
     int write_threshold;
     bool low_power;
     FILE * out_dump_fd;
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-		void*						mSoundBooster;
-		int 						mMusicVolumeIndex;
-		float						mMusicVolume;
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-	void	*mLVVE_Process;
-#endif
-#ifdef ENG_MODE
-    FILE*               fp_before_SB_Output;
-    FILE*               fp_after_SB_Output;
-#endif
-#endif //SEC_CHANGES_FOR_MINT
 };
 
 #define MAX_PREPROCESSORS 3 /* maximum one AGC + one NS + one AEC per input stream */
@@ -346,32 +269,6 @@ struct tiny_stream_in {
 
     struct tiny_audio_device *dev;
     int active_rec_proc;
-#ifdef SEC_CHANGES_FOR_MINT  
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-    void  *mLVVE_Process;
-    int  mTxSamplingRate;
-#endif
-
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SAMSUNGRECORD
-    void*				  mSamsungRecord;
-	
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_RESAMPLER_RECORD
-    void  *mDownSampler;
-    unsigned int  mSRCPeriodSize;
-    int  mReadStatus;
-    size_t  mInPcmInBuf;
-    int16_t *mPcmIn;
-		//	trace driver operations for dump
-    int mDriverOp;
-    int mStandbyCnt;
-#endif
-#ifdef ENG_MODE
-    FILE*    fp_before_ns;
-    FILE*    fp_after_ns;
-    FILE*    fp_input;
-#endif
-#endif 
 };
 
 struct config_parse_state {
@@ -404,10 +301,7 @@ static const struct {
     { AUDIO_DEVICE_IN_WIRED_HEADSET, "headset-in" },
     { AUDIO_DEVICE_IN_AUX_DIGITAL, "digital" },
     { AUDIO_DEVICE_IN_BACK_MIC, "back-mic" },
-
-#ifdef SEC_CHANGES_FOR_MINT
-    { AUDIO_DEVICE_IN_FM, "linein-capture"},
-#endif //SEC_CHANGES_FOR_MINT
+    //{ "linein-capture"},
 };
 /*
  * card define
@@ -495,45 +389,6 @@ static int out_dump_release(FILE **fd)
     return 0;
 }
 
-
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-static int soundsolution_init(struct tiny_stream_out *out);
-static int soundsolution_clear(struct tiny_stream_out *out);
-static int set_soundsolution(struct tiny_stream_out *out, int state);
-static int soundsolution_process(struct tiny_stream_out *out, void *buffer, size_t bytes);
-#endif
-
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SAMSUNGRECORD
-static int samsungREC_init(struct tiny_stream_in *in);
-static int samsungREC_clear(struct tiny_stream_in *in);
-static int samsungREC_process(struct tiny_stream_in *in, short *buffer, size_t bytes);
-#endif
-
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_RESAMPLER_RECORD
-static uint32_t bufferRatio(uint32_t samplingRate);
-#endif
-
-
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-static int getTimestamp(LVVE_PcmHandle_t handle, LVVE_PcmFrames_t* avail, LVVE_TimeStamp_t* time)
-{
-    struct timespec    localPcmTime    = {0,0};
-    unsigned int     localPcmAvail   = 0;
-    struct pcm *         hpcm;
-    int 			status;
-    	
-    hpcm = 	(struct pcm *)handle;
-    status = pcm_get_htimestamp(hpcm, &localPcmAvail, &localPcmTime);
-    
-    *avail           = (LVVE_PcmFrames_t)localPcmAvail;
-    (time->tv_sec)  =  localPcmTime.tv_sec;
-    (time->tv_nsec) =  localPcmTime.tv_nsec;	
-    
-    return status;	
-}
-#endif
-#endif //SEC_CHANGES_FOR_MINT
 
 int set_call_route(struct tiny_audio_device *adev, int device, int on)
 {
@@ -1033,7 +888,6 @@ static int do_output_standby(struct tiny_stream_out *out)
                 release_resampler(out->resampler_vplayback);
                 out->resampler_vplayback = 0;
             }
-         }
         }
         /* stop writing to echo reference */
         if (out->echo_reference != NULL) {
@@ -1053,23 +907,10 @@ static int out_standby(struct audio_stream *stream)
 {
     struct tiny_stream_out *out = (struct tiny_stream_out *)stream;
     int status;
-#ifdef SEC_CHANGES_FOR_MINT
-    struct tiny_audio_device *adev = out->dev;
-#endif //SEC_CHANGES_FOR_MINT
 
     pthread_mutex_lock(&out->dev->lock);
     pthread_mutex_lock(&out->lock);
     status = do_output_standby(out);
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-		if(out->mLVVE_Process){
-			lv_ProcOutReset(out->mLVVE_Process);
-		}
-
-		adev->mOutputRunning = 0;
-#endif 
-#endif //SEC_CHANGES_FOR_MINT
-
     pthread_mutex_unlock(&out->lock);
     pthread_mutex_unlock(&out->dev->lock);
     return status;
@@ -1094,25 +935,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     BLUE_TRACE("[out_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
 
     parms = str_parms_create_str(kvpairs);
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-			int volIndex;
-			float volGain;
-
-			if ((ret = str_parms_get_int(parms, "music_volume_index", &volIndex)) >= 0) 
-			{
-				ALOGI("mMusicVolumeIndex=%d", volIndex);
-				out->mMusicVolumeIndex = volIndex;
-				str_parms_del(parms, "music_volume_index");
-			}
-			if ((ret = str_parms_get_float(parms, "music_volume", &volGain)) >= 0) 
-			{
-				ALOGI("mMusicVolume=%f", volGain);
-				out->mMusicVolume = volGain;
-				str_parms_del(parms, "music_volume");
-			}
-#endif
-#endif //SEC_CHANGES_FOR_MINT
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (ret >= 0) {
@@ -1120,19 +942,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         ALOGW("[out_set_parameters],after str_parms_get_str,val(0x%x) ",val);
         pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_FMRADIO
-        if (adev->bFmMode && (AUDIO_MODE_IN_CALL != adev->mode)){
-            if (AUDIO_DEVICE_OUT_SPEAKER == val){
-                val = AUDIO_DEVICE_OUT_FM_SPEAKER;
-            }
-            /* it modified by SCRC engiier */
-            else if (AUDIO_DEVICE_OUT_WIRED_HEADSET == val || AUDIO_DEVICE_OUT_WIRED_HEADPHONE == val){
-                val = AUDIO_DEVICE_OUT_FM_HEADSET;
-            }
-        }
-#endif
-#endif //SEC_CHANGES_FOR_MINT
         if ((((adev->devices & AUDIO_DEVICE_OUT_ALL) != val) && (val != 0)) || (AUDIO_MODE_IN_CALL == adev->mode)) {
             adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
             adev->devices |= val;
@@ -1152,13 +961,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     return ret;
                 }
             }
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-			if( adev->mLVVE_Engine){
-				lv_setDevice(adev->mLVVE_Engine, (uint32_t)val);
-			}
-#endif
-#endif //SEC_CHANGES_FOR_MINT
         }else{
             pthread_mutex_unlock(&out->lock);
             pthread_mutex_unlock(&adev->lock);
@@ -1223,27 +1025,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
      * on the output stream mutex - e.g. executing select_mode() while holding the hw device
      * mutex
      */
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-			if(adev->mLVVE_Capabilities && out->mLVVE_Process && adev->mInputRunning ){
-				if (!adev->mOutputRunning){
-					LVVE_ProcessConfig_t config;
-					adev->mOutputRunning = 1;
-					config.getTimestamp = (LVVE_TimeStampFunction_t)&getTimestamp;
-					config.handle	 = (LVVE_PcmHandle_t)out->pcm;
-					config.format	 = 16; /*(uint32_t)out->format;*/
-					config.channels  = (uint32_t)out->config.channels;
-					config.sampleRate= (uint32_t)out->config.rate;
-					config.bufferSize= (uint32_t)out->config.period_size/2;
-					lv_ProcOutConfigure(out->mLVVE_Process, &config);
-					ALOGD("set output LVVE config: format=%d,channels=%d,samplerate=%d,buffersize=%d",config.format,config.channels,config.sampleRate,config.bufferSize);
-				}
-
-				lv_ProcOutProcess(out->mLVVE_Process, buffer, bytes);
-
-			}
-#endif
-#endif //SEC_CHANGES_FOR_MINT
 
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
@@ -1319,34 +1100,15 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
 	        b.raw = (void *)buffer;
 	        b.frame_count = in_frames;
 
-        get_playback_delay(out, out_frames, &b);
-        out->echo_reference->write(out->echo_reference, &b);
-    }
-    XRUN_TRACE("in_frames=%d, out_frames=%d", in_frames, out_frames);
-    XRUN_TRACE("out->write_threshold=%d, config.avail_min=%d, start_threshold=%d",
-                out->write_threshold,out->config.avail_min, out->config.start_threshold);
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef ENG_MODE
-    if(dumpSwitch[1]){
-        if(out->fp_before_SB_Output != NULL) {
-            fwrite(buffer,bytes,1,out->fp_before_SB_Output);
-        }
-    }
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-    soundsolution_process(out, (void*)buffer, bytes);
-#endif
-#ifdef ENG_MODE
-        if(dumpSwitch[1]) {
-            if(out->fp_after_SB_Output != NULL) {
-                fwrite(buffer,bytes,1,out->fp_after_SB_Output);
-            }
-        }
-#endif
-#endif //SEC_CHANGES_FOR_MINT
-    /* do not allow more than out->write_threshold frames in kernel pcm driver buffer */
-    do {
-        struct timespec time_stamp;
+	        get_playback_delay(out, out_frames, &b);
+	        out->echo_reference->write(out->echo_reference, &b);
+	    }
+	    XRUN_TRACE("in_frames=%d, out_frames=%d", in_frames, out_frames);
+	    XRUN_TRACE("out->write_threshold=%d, config.avail_min=%d, start_threshold=%d",
+	                out->write_threshold,out->config.avail_min, out->config.start_threshold);
+	    /* do not allow more than out->write_threshold frames in kernel pcm driver buffer */
+	    do {
+	        struct timespec time_stamp;
 
 	        if (pcm_get_htimestamp(out->pcm, (unsigned int *)&kernel_frames, &time_stamp) < 0)
 	            break;
@@ -1454,74 +1216,6 @@ static int start_input_stream(struct tiny_stream_in *in)
     return 0;
 }
 
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-static int soundsolution_init(struct tiny_stream_out *out)
-{
-    out->mSoundBooster = NULL;
-    out->mSoundBooster = CreateSoundBooster();
-    SoundBoosterInit(out->mSoundBooster, out->config.rate);
-    return 0;
-}
-
-static int soundsolution_clear(struct tiny_stream_out *out)
-{
-    if(out->mSoundBooster){
-        DestroySoundBooster(out->mSoundBooster);
-        out->mSoundBooster = NULL;
-    }
-
-    return 0;
-}
-
-static int set_soundsolution(struct tiny_stream_out *out, int state)
-{
-    int ret = NO_ERROR;
-    switch(state) {
-    case SOUNDBOOSTER_READ :
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-        ret = readSoundBoosterTable(out->mSoundBooster);
-#else
-        ALOGV("[%s] SOUNDBOOSTER filter not include",__func__);
-#endif
-        break;
-    case ACOUSTICEQ_READ :
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-        ret = readAcousticEQTable(out->mSoundBooster);
-#else
-        ALOGV("[%s] SOUNDBOOSTER filter not include",__func__);
-#endif
-        break;
-    default :
-        ALOGE("[%X] is not defined in [%s]", state, __func__);
-        break;
-    }
-    return NO_ERROR;
-}
-
-static int soundsolution_process(struct tiny_stream_out *out, void *buffer, size_t bytes)
-{
-	//ALOGE("sound solution process...................");
-    struct tiny_audio_device *adev = out->dev;
-
-    if(adev->devices&  AUDIO_DEVICE_OUT_SPEAKER) {
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-        if(adev->mLVVE_Capabilities && out->mLVVE_Process && adev->mInputRunning) {
-            setVoipMode(out->mSoundBooster,true);
-        }
-        else {
-            setVoipMode(out->mSoundBooster,false);
-       }
-#endif
-        SoundBoosterProcess(out->mSoundBooster, (short*)buffer, bytes, out->config.channels, out->mMusicVolumeIndex, out->mMusicVolume);
-#endif
-    }
-    return 0;
-}
-#endif
-#endif //SEC_CHANGES_FOR_MINT
-
 static uint32_t in_get_sample_rate(const struct audio_stream *stream)
 {
     struct tiny_stream_in *in = (struct tiny_stream_in *)stream;
@@ -1613,14 +1307,6 @@ static int in_standby(struct audio_stream *stream)
     pthread_mutex_lock(&in->dev->lock);
     pthread_mutex_lock(&in->lock);
     status = do_input_standby(in);
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-		if(in->mLVVE_Process){
-			lv_ProcInReset(in->mLVVE_Process);
-		}
-#endif
-#endif // SEC_CHANGES_FOR_MINT
-
     pthread_mutex_unlock(&in->lock);
     pthread_mutex_unlock(&in->dev->lock);
     return status;
@@ -1831,29 +1517,7 @@ static void push_echo_reference(struct tiny_stream_in *in, size_t frames)
                in->ref_frames_in * in->config.channels * sizeof(int16_t));
     }
 }
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_RESAMPLER_RECORD
-//google resampler from crespo can't support 32000 and 48000
-//If you want to use google resampler, you have to take care of it!!!
-const uint32_t inputSamplingRates[] = {
-        8000, 11025, 16000, 22050, 32000, 44100, 48000
-};
-static uint32_t bufferRatio(uint32_t samplingRate) {
-    switch (samplingRate) {
-    case 8000:
-    case 11025:
-        return 4;
-    case 16000:
-    case 22050:
-        return 2;
-    case 44100:
-    default:
-        break;
-    }
-    return 1;
-}
-#endif
-#endif // SEC_CHANGES_FOR_MINT
+
 static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
                                    struct resampler_buffer* buffer)
 {
@@ -1884,33 +1548,16 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
             buffer->frame_count = 0;
             return in->read_status;
         }
-#ifdef SEC_CHANGES_FOR_MINT
-        in->frames_in = in->config.period_size;
-        buffer->frame_count = (buffer->frame_count > in->frames_in) ?
-                                in->frames_in : buffer->frame_count;
-        buffer->i16 = in->buffer + (in->config.period_size - in->frames_in) *
-                                                in->config.channels;
-											
-        #ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-        struct tiny_audio_device *adev = in->dev;//added for nxp
-        if(adev->mLVVE_Capabilities && in->mLVVE_Process){
-                lv_ProcInProcess(in->mLVVE_Process, buffer->raw, buffer->frame_count * in->config.channels * sizeof(int16_t));
-        }
-        #endif
-#endif //SEC_CHANGES_FOR_MINT
         if (in->active_rec_proc)
             aud_rec_do_process((void *)in->buffer,
                                 in->config.period_size *audio_stream_frame_size(&in->stream.common));
-#ifdef SEC_CHANGES_FOR_MINT        
-    }else{
-#endif // SEC_CHANGES_FOR_MINT
-        buffer->frame_count = (buffer->frame_count > in->frames_in) ?
-                                in->frames_in : buffer->frame_count;
-        buffer->i16 = in->buffer + (in->config.period_size - in->frames_in) *
-                                                in->config.channels;
-#ifdef SEC_CHANGES_FOR_MINT
+        in->frames_in = in->config.period_size;
     }
-#endif //SEC_CHANGES_FOR_MINT
+
+    buffer->frame_count = (buffer->frame_count > in->frames_in) ?
+                                in->frames_in : buffer->frame_count;
+    buffer->i16 = in->buffer + (in->config.period_size - in->frames_in) *
+                                                in->config.channels;
 
     return in->read_status;
 
@@ -2056,58 +1703,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
         if (ret == 0)
             in->standby = 0;
     }
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_RESAMPLER_RECORD
-    if (in->mDownSampler != NULL) {
-        in->mInPcmInBuf = 0;
-    }
-#endif
-#endif // SEC_CHANGES_FOR_MINT
     pthread_mutex_unlock(&adev->lock);
 
     if (ret < 0)
         goto exit;
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-    if(adev->mLVVE_Capabilities && in->mLVVE_Process && !adev->mInputRunning){
-		LVVE_ProcessConfig_t config;
-		config.getTimestamp = (LVVE_TimeStampFunction_t)&getTimestamp; //commented by zoulh
-		config.handle	 = (LVVE_PcmHandle_t)in->pcm; //commented by zoulh
-		config.format	 = 16; /*(uint32_t)in->format;*/
-		config.channels  = (uint32_t)in->config.channels;
-		config.sampleRate= (uint32_t)in->config.rate;
-		config.bufferSize= (uint32_t)in->config.period_size/2;
-		lv_ProcInConfigure(in->mLVVE_Process, &config);
-		adev->mInputRunning = 1;
-		ALOGV("set input LVVE config: format=%d,channels=%d,samplerate=%d,buffersize=%d",config.format,config.channels,config.sampleRate,config.bufferSize);
-    }		
-#endif  
-#endif // SEC_CHANGES_FOR_MINT
-
-#if defined (SEC_PRODUCT_FEATURE_AUDIO_RESAMPLER_RECORD)&& defined(SEC_CHANGES_FOR_MINT)
-	if(in->mDownSampler)
-	{
-		 ret = ProcALSADownsampler(in->mDownSampler,(int16_t *) buffer, &frames_rq);
-		if(ret != NO_ERROR){
-			ALOGE("in_read error %d", (int)ret);
-			goto exit;		
-		}else{
-		    ret=frames_rq;
-		}
-	}else{
-	     if (in->num_preprocessors != 0)
-             ret = process_frames(in, buffer, frames_rq);
-         else if (in->resampler != NULL)
-             ret = read_frames(in, buffer, frames_rq);
-         else {
-             ret = pcm_read(in->pcm, buffer, bytes);
-         if (ret == 0 && in->active_rec_proc)
-             aud_rec_do_process(buffer, bytes);
-         
-	     ALOGE(" resampler config opened, but no resampler handle !!");
-	     }
-	}	 
-#else
+    /*BLUE_TRACE("in_read start.num_preprocessors=%d, resampler=%d",
+                    in->num_preprocessors, in->resampler);*/
     if (in->num_preprocessors != 0)
         ret = process_frames(in, buffer, frames_rq);
     else if (in->resampler != NULL)
@@ -2117,36 +1718,13 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
         if (ret == 0 && in->active_rec_proc)
             aud_rec_do_process(buffer, bytes);
     }
-#endif // SEC_CHANGES_FOR_MINT
+
     if (ret > 0)
         ret = 0;
 
     if (ret == 0 && adev->mic_mute)
         memset(buffer, 0, bytes);
     /*BLUE_TRACE("in_read OK, bytes=%d", bytes);*/
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef ENG_MODE
-    if(dumpSwitch[2]) {
-        if(in->fp_before_ns != NULL) {
-            fwrite(buffer,bytes,1,in->fp_before_ns);
-        }
-    }
-#endif
-
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SAMSUNGRECORD
-	if(in->dev->mode == AUDIO_MODE_NORMAL/* && ! mParent->getInputSource() != AUDIO_SOURCE_VOICE_RECOGNITION*/ ){
-		samsungREC_process(in, (short *)buffer,bytes);
-	}
-#endif
-
-#ifdef ENG_MODE
-    if(dumpSwitch[2]) {
-        if(in->fp_after_ns != NULL) {
-            fwrite(buffer,bytes,1,in->fp_after_ns);
-        }
-    }
-#endif
-#endif // SEC_CHANGES_FOR_MINT
 exit:
     if (ret < 0) {
         ALOGW("in_read,warning: ret=%d, (%s)", ret, pcm_get_error(in->pcm));
@@ -2241,33 +1819,6 @@ exit:
     return status;
 }
 
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SAMSUNGRECORD
-static int samsungREC_init(struct tiny_stream_in *in)
-{
-    in->mSamsungRecord= NULL;
-    in->mSamsungRecord = CreateSamsungREC();
-    return 0;
-}
-
-static int samsungREC_clear(struct tiny_stream_in *in)
-{
-    if(in->mSamsungRecord){
-        DestroySamsungREC(in->mSamsungRecord);
-        in->mSamsungRecord= NULL;
-    }
-
-    return 0;
-}
-
-static int samsungREC_process(struct tiny_stream_in *in, short *buffer, size_t bytes)
-{
-    SamsungRECProcess(in->mSamsungRecord, in->config.rate, buffer, buffer, in->config.channels, bytes);
-    return 0;
-}
-#endif
-#endif // SEC_CHANGES_FOR_MINT
-
 static int adev_open_output_stream(struct audio_hw_device *dev,
                               audio_io_handle_t handle,
                               audio_devices_t devices,
@@ -2316,14 +1867,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->dev = ladev;
     out->standby = 1;
 
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-		out->mSoundBooster =NULL;
-		out->mMusicVolumeIndex= 7;
-		out->mMusicVolume = 1.0f;
-#endif
-#endif // SEC_CHANGES_FOR_MINT
-
     /* FIXME: when we support multiple output devices, we will want to
      * do the following:
      * adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
@@ -2336,26 +1879,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
     config->sample_rate = out->stream.common.get_sample_rate(&out->stream.common);
 
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-    soundsolution_init(out);
-#endif	
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-    out->mLVVE_Process = NULL;
-    if(ladev->mLVVE_Engine){
-		out->mLVVE_Process = lv_getOutputProcess(ladev->mLVVE_Engine);
-    }
-    if(out->mLVVE_Process){
-		lv_ProcOutReset(out->mLVVE_Process);
-    }
-#endif
-#ifdef ENG_MODE
-    if( (out->fp_before_SB_Output = fopen("/data/snd/before_SB_output.pcm", "w+")) == NULL)
-        ALOGE("can not make /data/snd/before_SB_output.pcm ");
-    if( (out->fp_after_SB_Output = fopen("/data/snd/after_SB_output.pcm", "w+")) == NULL)
-        ALOGE("can not make /data/snd/after_SB_output.pcm ");
-#endif
-#endif // #ifdef SEC_CHANGES_FOR_MINT
     BLUE_TRACE("Successful, adev_open_output_stream");
     *stream_out = &out->stream;
     return 0;
@@ -2372,10 +1895,6 @@ static void adev_close_output_stream(struct audio_hw_device *dev,
 {
     struct tiny_stream_out *out = (struct tiny_stream_out *)stream;
     BLUE_TRACE("adev_close_output_stream");
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-    ALOGE("%s: soundsolution_clear", __FUNCTION__);
-    soundsolution_clear(out);
-#endif
     out_standby(&stream->common);
     if (out->buffer)
         free(out->buffer);
@@ -2387,37 +1906,15 @@ static void adev_close_output_stream(struct audio_hw_device *dev,
     if(out->resampler_vplayback)
         release_resampler(out->resampler_vplayback);
     free(stream);
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef ENG_MODE
-    if(out->fp_before_SB_Output != NULL) {
-        fclose(out->fp_before_SB_Output);
-        out->fp_before_SB_Output = NULL;
-    }
-    if(out->fp_after_SB_Output != NULL) {
-        fclose(out->fp_after_SB_Output);
-        out->fp_after_SB_Output = NULL;
-    }
-#endif
-#endif // #ifdef SEC_CHANGES_FOR_MINT
 }
 
 static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
     struct str_parms *parms;
+    char *str;
     char value[32];
     int ret;
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef ENG_MODE
-    const char key_dumpSwitch[] = "dumpSwitch";
-#endif
-    char *key;
-    int loopback_mode = 0;
-
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-		const char setSolution[] = "solution";
-#endif
-#endif // SEC_CHANGES_FOR_MINT
 
     BLUE_TRACE("adev_set_parameters, kvpairs : %s", kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -2437,188 +1934,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         else
             adev->low_power = true;
     }
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef ENG_MODE
-    int dumpIndex = 0;
-    ret =  str_parms_get_int(parms, key_dumpSwitch, &dumpIndex);
-    if (ret >= 0){
-        dumpSwitch[dumpIndex/2] = (dumpIndex%2) ? true : false;
-        ALOGI("[GA_AUDIO]SetParameters dumpSwitch changed dumpSwitch[%d] = %d", dumpIndex, dumpSwitch[dumpIndex/2]);
-    }
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-
-		key = "realcall";
-		if ((ret = str_parms_get_str(parms, key, value, sizeof(value))) >= 0) {
-			if (strcmp(value, "on") == 0) {
-				adev->mIsRealCall = 1;
-			}else{
-				adev->mIsRealCall = 0;
-			}
-	
-			ALOGV("%s: mIsRealCall = %d", __FUNCTION__, adev->mIsRealCall);
-		}	
-		memset(value, 0, sizeof(value));
-	
-#endif
-
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL	
-	if (!NREC_DEVICE(adev->devices) &&
-		(ret = str_parms_get_str(parms, "voip", value, sizeof(value))) >= 0) {
-		ALOGD("===%s, set_parameter voip=%s", __FUNCTION__, value);	
-		if (strcmp(value, "on") == 0) {
-			adev->mLVVE_Capabilities = 1;		
-		}else if (strcmp(value, "off") == 0) {
-			adev->mLVVE_Capabilities = 0; 
-		}
-	} 
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SOUNDBOOSTER
-		int intvalue;
-
-		key = setSolution;
-	   if (str_parms_get_int(parms, key, &intvalue) == 0) {
-		ALOGI("%s: setSolution %d", __FUNCTION__, intvalue);
-			set_soundsolution(adev->active_output, intvalue);
-			str_parms_del(parms, key);
-		}
-#endif
-
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_FMRADIO
-    if ((ret = str_parms_get_str(parms, "fm_mode", value, sizeof(value))) >= 0){
-        if (strcmp(value, "on") == 0) {
-			adev->bFmMode = true;		
-		}else if (strcmp(value, "off") == 0) {
-		    bool bChange = false;
-			adev->bFmMode = false;
-            if(adev->devices & AUDIO_DEVICE_OUT_FM_HEADSET){          
-                adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
-                adev->devices |= AUDIO_DEVICE_OUT_WIRED_HEADSET;
-                bChange = true;
-            }
-            else if (adev->devices & AUDIO_DEVICE_OUT_FM_SPEAKER){
-                adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
-                adev->devices |= AUDIO_DEVICE_OUT_SPEAKER;
-                bChange = true;
-            }
-            if (bChange){
-                pthread_mutex_lock(&adev->lock);
-                select_devices_signal(adev);
-                pthread_mutex_unlock(&adev->lock);
-            }
-		}
-    }
-
-#endif
-    //[for factory test===================================================
-    ret = str_parms_get_str(parms, "factory_test_route", value, sizeof(value));
-    if (ret >= 0) 
-    {
-        //force factory test route
-        BLUE_TRACE("factory_test_route begin");
-        pthread_mutex_lock(&adev->lock);
-        if(strcmp(value,"off") == 0)
-        {
-            adev->devices = adev->factoryTestDev;
-            adev->factoryTestDev = -1;
-        }
-        else
-        {
-            if(adev->factoryTestDev == -1)
-            {
-                adev->factoryTestDev = adev->devices;//save the device before factory test
-            }
-            //adev->prev_devices = adev->devices;
-            adev->devices &= ~AUDIO_DEVICE_OUT_ALL;
-            if(strcmp(value,"spk") == 0) 
-            {
-                adev->devices |= AUDIO_DEVICE_OUT_SPEAKER;
-            } 
-            else if(strcmp(value,"rcv") == 0) 
-            {
-                adev->devices |= AUDIO_DEVICE_OUT_EARPIECE;
-            } 
-            else if(strcmp(value,"ear") == 0)
-            {
-                adev->devices |= AUDIO_DEVICE_OUT_WIRED_HEADSET;
-            } 
-            else if(strcmp(value,"hdmi") == 0)
-            {
-                adev->devices |= AUDIO_DEVICE_OUT_AUX_DIGITAL;
-                force_all_standby(adev);
-            }
-            else
-            {
-                //bad value              
-            }
-        }
-        select_devices_signal(adev);
-        pthread_mutex_unlock(&adev->lock);
-        //for routing
-    } 
-	//Added for loop_test
-
-    /* add code for loopback on/off*/
-    ret = str_parms_get_str(parms, "factory_test_loopback", value, sizeof(value));
-    if (ret >= 0) 
-    {
-        //pthread_mutex_lock(&adev->lock);
-        if(!strcmp("on",value))
-        {
-            adev->test_loop_on = true;
-        }
-        else
-        {
-            //turn off the loopback
-            at_cmd_audio_loop(0,0, 0, 0, 0, 0);
-            adev->test_loop_on = false;
-        }
-        //pthread_mutex_unlock(&adev->lock);
-    }
-    ret = str_parms_get_str(parms, "factory_test_path", value, sizeof(value));
-    if (ret >= 0)
-    {
-        if(!strcmp("mic_ear",value))
-        {
-            //map to modem headset mode.
-            loopback_mode = 3;
-        }
-        else if (!strcmp("ear_ear",value))
-        {
-            //map to ?
-            //close the line-in device first
-            if(adev->devices&AUDIO_DEVICE_IN_FM)
-            {
-                adev->devices &= ~AUDIO_DEVICE_IN_FM;
-                select_devices_signal(adev); /* it's fixed by samsung */
-            }
-            loopback_mode = 2;
-        }
-        else if(!strcmp("mic_spk",value))
-        {
-            //map to modem handfree mode
-            loopback_mode = 1;
-            //need to close loopback first
-            if(adev->test_loop_on)
-            {
-                at_cmd_audio_loop(0,0, 0, 0, 0, 0);
-            }
-        }
-        else if(!strcmp("mic_rcv",value))
-        {
-            //map to modem handhold mode
-            loopback_mode = 0;
-        }
-        //call some function for routing
-        if(adev->test_loop_on)
-        {
-            at_cmd_audio_loop(1, loopback_mode, 8, 1, 0, 0);
-        }
-
-    }
-    //Added for loop_test end
-    //[for factory test===================================================
-#endif // SEC_CHANGES_FOR_MINT
 
     str_parms_destroy(parms);
     return ret;
@@ -2627,21 +1942,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 static char * adev_get_parameters(const struct audio_hw_device *dev,
                                   const char *keys)
 {
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
-		char *ret_val;
-		if(strcmp(keys, "realcall") == 0)
-		{
-			if(adev->mIsRealCall == 1)
-				ret_val = strdup("1");
-			else
-				ret_val = strdup("0");
-	
-			return ret_val;
-		}
-#endif
-#endif 
     return strdup("");
 }
 
@@ -2655,14 +1955,6 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
     BLUE_TRACE("adev_set_voice_volume in...volume:%f mode:%d call_start:%d ",volume,adev->mode,adev->call_start);
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-		if(adev->mLVVE_Capabilities && adev->mLVVE_Engine){
-			lv_setVolume(adev->mLVVE_Engine, volume);
-			volume = 1.0;
-		}
-#endif
-#endif 
 
     adev->voice_volume = volume;
     /*Send at command to cp side*/
@@ -2703,30 +1995,12 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
 
     adev->mic_mute = state;
 
-#ifdef SEC_CHANGES_FOR_MINT  
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-    if(adev->mLVVE_Capabilities && adev->mLVVE_Engine){
-        return lv_setMicMute(adev->mLVVE_Engine, state);
-    }
-#endif
-  
-    if (adev->mode == AUDIO_MODE_IN_CALL){
-        at_cmd_mic_mute(state);
-    }
-#endif // SEC_CHANGES_FOR_MINT
     return 0;
 }
 
 static int adev_get_mic_mute(const struct audio_hw_device *dev, bool *state)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-			if(adev->mLVVE_Capabilities && adev->mLVVE_Engine){
-				return lv_getMicMute(adev->mLVVE_Engine, state);
-			}
-#endif  
-#endif // SEC_CHANGES_FOR_MINT
 
     *state = adev->mic_mute;
 
@@ -2784,18 +2058,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
 
     in->requested_rate = config->sample_rate;
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-		if(!ladev->mIsRealCall) {
-			if (config->sample_rate)
-				//config->sample_rate = DEFAULT_SAMPLE_RATE;
-				config->sample_rate = 44100;
-			if (config->channel_mask)
-				config->channel_mask = 0xc;
-			ALOGV("%s : mSampleRate = %d, pRate= %d \n",__FUNCTION__, in->config.rate, config->sample_rate);
-		}
-#endif
-#endif // SEC_CHANGES_FOR_MINT
 #ifndef _VOICE_CALL_VIA_LINEIN
     if (ladev->call_start)
         memcpy(&in->config, &pcm_config_vrec_vx, sizeof(pcm_config_vrec_vx));
@@ -2804,45 +2066,16 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         memcpy(&in->config, &pcm_config_mm_ul, sizeof(pcm_config_mm_ul));
     in->config.channels = channel_count;
 
-    in->buffer = malloc(in->config.period_size *
-                        audio_stream_frame_size(&in->stream.common));
-    if (!in->buffer) {
-        ret = -ENOMEM;
-        goto err;
-    }
-#if defined(SEC_PRODUCT_FEATURE_AUDIO_RESAMPLER_RECORD)&&defined(SEC_CHANGES_FOR_MINT)
-    struct BufferProvider *buffer_provider;
-    if (in->requested_rate != in->config.rate) {
-		in->mDownSampler = NULL;
-		in->mPcmIn = NULL;
-		in->mInPcmInBuf = 0;	
-		in->mReadStatus = 0;
-		in->mDriverOp = 0;
-		in->mStandbyCnt = 0;
-		in->mSRCPeriodSize = in->config.period_size;
-		buffer_provider = (struct BufferProvider *)calloc(1, sizeof(struct BufferProvider));
-		if (!buffer_provider )
-			return -ENOMEM;
-		buffer_provider->provider	   = (void*)&in->buf_provider;
-		buffer_provider->getNextBuffer = (void*)get_next_buffer;
-		buffer_provider->releaseBuffer = (void*)release_buffer;
-		in->mDownSampler = CreateALSADownsampler(in->requested_rate,in->config.rate,in->config.channels,in->mSRCPeriodSize,buffer_provider);
-		ret = InitCheckALSADownsampler(in->mDownSampler);
-		if (ret != NO_ERROR) {
-			DestroyALSADownsampler(in->mDownSampler);
-			ALOGW("%s downsampler init failed: %d", __FUNCTION__, ret);
-			return ret;
-		}
-		//in->mPcmIn = new int16_t[in->mSRCPeriodSize * in->channel_count];	in->mPcmIn = (int16_t*)calloc(1, sizeof(int16_t) * in->mSRCPeriodSize * in->channel_count);
-		in->mPcmIn = (int16_t*)calloc(1, sizeof(int16_t) * in->mSRCPeriodSize * in->config.channels);
-		if (in->mPcmIn == NULL)return -ENOMEM;
-		ALOGV("CreateALSADownsampler done, sample rate:%d, channel count:%d, mSRCPeriodSize:%d",
-			 in->requested_rate,in->config.channels,in->mSRCPeriodSize);
-    }
-#else
     if (in->requested_rate != in->config.rate) {
         in->buf_provider.get_next_buffer = get_next_buffer;
         in->buf_provider.release_buffer = release_buffer;
+
+        in->buffer = malloc(in->config.period_size *
+                audio_stream_frame_size(&in->stream.common));
+        if (!in->buffer) {
+            ret = -ENOMEM;
+            goto err;
+        }
 
         ret = create_resampler(in->config.rate,
                                in->requested_rate,
@@ -2855,48 +2088,12 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             goto err;
         }
     }
-#endif // SEC_CHANGES_FOR_MINT
+
     in->dev = ladev;
     in->standby = 1;
     in->device = devices;
 
     *stream_in = &in->stream;
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SAMSUNGRECORD
-	samsungREC_init(in);
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-    in->mTxSamplingRate = 0;
-    in->mLVVE_Process = NULL;
-    if(ladev->mLVVE_Engine){
-	in->mLVVE_Process = lv_getInputProcess(ladev->mLVVE_Engine);
-    }
-    if(in->mLVVE_Process){
-	lv_ProcInReset(in->mLVVE_Process);
-    }
-    ladev->mInputRunning = 0;
-#endif
-#ifdef ENG_MODE
-    in->fp_before_ns = NULL;
-    in->fp_after_ns = NULL;
-    in->fp_input = NULL;
-    char strInputDump[64] = {0,};
-
-    sprintf(strInputDump, "/data/snd/input_after_ns%d.pcm",dumpFileNumber%3);
-    if( (in->fp_after_ns = fopen(strInputDump, "w+")) == NULL)
-        ALOGE("can not make %s", strInputDump);
-
-    memset(strInputDump,0,64);
-    sprintf(strInputDump, "/data/snd/input_before_ns%d.pcm",dumpFileNumber%3);
-    if( (in->fp_before_ns = fopen(strInputDump, "w+")) == NULL)
-        ALOGE("can not make %s", strInputDump);
-
-    memset(strInputDump,0,64);
-    sprintf(strInputDump, "/data/snd/input%d.pcm",dumpFileNumber++%3);
-    if( (in->fp_input = fopen(strInputDump, "w+")) == NULL)
-        ALOGE("can not make %s", strInputDump);
-#endif
-#endif // SEC_CHANGES_FOR_MINT
     BLUE_TRACE("Successfully, adev_open_input_stream.");
     return 0;
 
@@ -2923,41 +2120,12 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         free(in->buffer);
         release_resampler(in->resampler);
     }
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_RESAMPLER_RECORD	
-    if (in->mDownSampler != NULL) {
-	    DestroyALSADownsampler(in->mDownSampler);
-	    if (in->mPcmIn != NULL) {
-		free(in->mPcmIn);
-	    }  
-    }
-#endif
-#endif 
     if (in->proc_buf)
         free(in->proc_buf);
     if (in->ref_buf)
         free(in->ref_buf);
 
     free(stream);
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef ENG_MODE
-   if(in->fp_after_ns != NULL) {
-        fclose(in->fp_after_ns);
-        in->fp_after_ns = NULL;
-    }
-   if(in->fp_before_ns != NULL) {
-        fclose(in->fp_before_ns);
-        in->fp_before_ns = NULL;
-    }
-    if(in->fp_input != NULL) {
-        fclose(in->fp_input);
-        in->fp_input = NULL;
-    }
-#endif
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_SAMSUNGRECORD
-    samsungREC_clear(in);
-#endif
-#endif // SEC_CHANGES_FOR_MINT
     return;
 }
 
@@ -2992,13 +2160,6 @@ static int adev_close(hw_device_t *device)
     mixer_close(adev->mixer);
     stream_routing_manager_close(adev);
     free(device);
-#ifdef SEC_CHANGES_FOR_MINT
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-    if (adev->mLVVE_Engine){
-        lv_destoryEngine(adev->mLVVE_Engine);
-    }
-#endif
-#endif // SEC_CHANGES_FOR_MINT    
     return 0;
 }
 
@@ -3047,6 +2208,10 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
             s->adev->private_ctl.vbc_eq_profile_select =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.vbc_eq_profile_select);
+        } else if (strcmp(s->private_name, PRIVATE_MIC_BIAS) == 0) {
+            s->adev->private_ctl.mic_bias_switch =
+                 mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.mic_bias_switch);
         } else if (strcmp(s->private_name, PRIVATE_INTERNAL_PA) == 0) {
             s->adev->private_ctl.internal_pa =
                  mixer_get_ctl_by_name(s->adev->mixer, name);
@@ -3433,12 +2598,6 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->hw_device.open_input_stream = adev_open_input_stream;
     adev->hw_device.close_input_stream = adev_close_input_stream;
     adev->hw_device.dump = adev_dump;
-#ifdef SEC_CHANGES_FOR_MINT
-    //Added for loop_test
-    adev->factoryTestDev = -1;
-    adev->test_loop_on = false;
-    //Added for loop_test end
-#endif // SEC_CHANGES_FOR_MINT
 
     /* query sound cards*/
     s_tinycard = get_snd_card_number(CARD_SPRDPHONE);
@@ -3504,19 +2663,7 @@ static int adev_open(const hw_module_t* module, const char* name,
 #endif
     ret = mmi_audio_loop_open();
     if (ret)  ALOGW("Warning: audio loop can NOT work.");
-#ifdef SEC_CHANGES_FOR_MINT    
-#ifdef SEC_PRODUCT_FEATURE_AUDIO_LVVIL
-	ALOGV("===%s, create lvve engine===", __FUNCTION__);
-	adev->mLVVE_Engine = NULL;
-	adev->mLVVE_Capabilities = 0;
-	if (!NREC_DEVICE(adev->devices)){
-		adev->mLVVE_Engine = lv_createEngine();
-	}
-	adev->mIsRealCall = 0;
-	adev->mOutputRunning = 0;
-	adev->mInputRunning = 0;
-#endif 
-#endif // SEC_CHANGES_FOR_MINT
+    
     ret = stream_routing_manager_create(adev);
     if (ret) {
         ALOGE("Unable to create stream_routing_manager, aborting.");
