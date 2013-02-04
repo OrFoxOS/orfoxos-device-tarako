@@ -155,7 +155,7 @@ static void reset_modem(void)
 		return;
         if(need_shutdown == 1){
         	write(modem_power_fd,"0",2);
-		usleep(500*1000);
+		usleep(1000*1000);
 	}
 	need_shutdown = 1;
         write(modem_power_fd,"1",2);
