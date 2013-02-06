@@ -8,12 +8,12 @@ var	slogsaveall	off
 
 #type	name	state	size	level
 stream	kernel	off	0	7
+stream	main	off	0	7
 stream	system	off	0	8
 stream	radio	off	0	0
 stream	modem	on	0	5
-stream	main	off	0	7
-stream	wifi	off	0	7
 stream	bt	off	0	7
+stream	tcp	off	0	7
 misc	misc	off	0	5
 
 #type	name		opt	level	inter	action
@@ -35,4 +35,3 @@ snap	dumpsys		cmd	9	0	dumpsys
 #type	name		level	file
 notify	anr		1	/data/anr
 notify	tombstones	1	/data/tombstones
-notify	hprofs		1	/data/misc/hprofs/
