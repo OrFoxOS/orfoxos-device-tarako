@@ -57,10 +57,58 @@ recv_socket(int sockfd, void* buffer, int size)
         return received;
 }
 
+void update_conf(const char *keyword)
+{
+	FILE *fp;
+	int len, ret;
+	char *pt, buffer[MAX_LINE_LEN];
+
+	fp = fopen(TMP_SLOG_CONFIG, "r");
+	if(fp == NULL) {
+		perror("open conf failed!\n");
+		return;
+	}
+	len = fread(buffer, 1, MAX_LINE_LEN, fp);
+	if(len <= 0) {
+		perror("read conf failed!\n");
+		fclose(fp);
+		return;
+	}
+	fclose(fp);
+	fp = fopen(TMP_SLOG_CONFIG, "w");
+	if(fp == NULL) {
+		perror("open conf failed!\n");
+		return;
+	}
+	fprintf(fp, "%s\n", keyword);
+	pt = strstr(buffer, "enable");
+	if(pt != NULL) {
+		pt = pt + 7;
+		goto find;
+	}
+	pt = strstr(buffer, "disable");
+	if(pt != NULL) {
+		pt = pt + 8;
+		goto find;
+	}
+	pt = strstr(buffer, "low_power");
+	if(pt != NULL) {
+		pt = pt + 10;
+		goto find;
+	}
+find:
+	fprintf(fp, "%s", pt);
+	fclose(fp);
+	return;
+}
+
 void usage(const char *name)
 {
 	printf("Usage: %s <operation> [arguments]\n", name);
 	printf("Operation:\n"
+               "\tenable      update config file and enable slog\n"
+               "\tdisable     update config file and disable slog\n"
+               "\tlow_power   update config file and make slog in low_power state\n"
                "\treload      reboot slog and parse config file.\n"
                "\tsnap [arg]  catch certain snapshot log, catch all snapshot without any arg\n"
                "\texec <arg>  through the slogctl to run a command.\n"
@@ -82,6 +130,10 @@ int main(int argc, char *argv[])
 
 	/*
 	arguments list:
+	enable		update config file and enable slog
+	disable		update config file and disable slog
+	low_power	update config file and make slog in low_power state
+
 	reload		CTRL_CMD_TYPE_RELOAD,
 	snap $some	CTRL_CMD_TYPE_SNAP,
 	snap 		CTRL_CMD_TYPE_SNAP_ALL,
@@ -92,7 +144,7 @@ int main(int argc, char *argv[])
 	clear		CTRL_CMD_TYPE_CLEAR,
 	dump		CTRL_CMD_TYPE_DUMP,
 	screen		CTRL_CMD_TYPE_SCREEN,
-	hook_modem	CTRL_CMD_TYPE_HOOK_MODEM,
+	hook_modem      CTRL_CMD_TYPE_HOOK_MODEM
 	*/
 	if(argc < 2) {
 		usage(argv[0]);
@@ -138,6 +190,15 @@ int main(int argc, char *argv[])
 		cmd.type = CTRL_CMD_TYPE_QUERY;
 	} else if(!strncmp(argv[1], "hook_modem", 10)) {
 		cmd.type = CTRL_CMD_TYPE_HOOK_MODEM;
+	} else if(!strncmp(argv[1], "enable", 6)) {
+		update_conf("enable");
+		cmd.type = CTRL_CMD_TYPE_RELOAD;
+	} else if(!strncmp(argv[1], "disable", 7)) {
+		update_conf("disable");
+		cmd.type = CTRL_CMD_TYPE_RELOAD;
+	} else if(!strncmp(argv[1], "low_power", 9)) {
+		update_conf("low_power");
+		cmd.type = CTRL_CMD_TYPE_RELOAD;
 	} else {
 		usage(argv[0]);
 		return 0;

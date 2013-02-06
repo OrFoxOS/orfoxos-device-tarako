@@ -32,7 +32,7 @@
 
 #include "slog.h"
 
-int slog_enable = 1;
+int slog_enable = SLOG_ENABLE;
 int screenshot_enable = 1;
 int slog_save_all = 0;
 int slog_start_step = 0;
@@ -40,9 +40,12 @@ int stream_log_handler_started = 0;
 int snapshot_log_handler_started = 0;
 int notify_log_handler_started = 0;
 int bt_log_handler_started = 0;
+int tcp_log_handler_started = 0;
 int modem_log_handler_started = 0;
 
 int internal_log_size = 10; /*M*/
+
+int hook_modem_flag = 0;
 
 char *config_log_path = INTERNAL_LOG_PATH;
 char *current_log_path;
@@ -53,7 +56,7 @@ char external_path[MAX_NAME_LEN];
 struct slog_info *stream_log_head, *snapshot_log_head;
 struct slog_info *notify_log_head, *misc_log;
 
-pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, modem_tid;
+pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid, modem_tid;
 
 static void handler_exec_cmd(struct slog_info *info, char *filepath)
 {
@@ -69,23 +72,22 @@ static void handler_exec_cmd(struct slog_info *info, char *filepath)
 		return;
 	}
 
-        /* add timestamp */
-        t = time(NULL);
-        localtime_r(&t, &tm);
-        fprintf(fp, "\n============ %s  %02d-%02d-%02d %02d:%02d:%02d  ==============\n",
-				info->log_basename,
-				tm.tm_year % 100,
-				tm.tm_mon + 1,
-				tm.tm_mday,
-				tm.tm_hour,
-				tm.tm_min,
-				tm.tm_sec);
-	fclose(fp);
+	/* add timestamp */
+	t = time(NULL);
+	localtime_r(&t, &tm);
+	fprintf(fp, "\n============ %s  %02d-%02d-%02d %02d:%02d:%02d  ==============\n",
+			info->log_basename,
+			tm.tm_year % 100,
+			tm.tm_mon + 1,
+			tm.tm_mday,
+			tm.tm_hour,
+			tm.tm_min,
+			tm.tm_sec);
 
+	fclose(fp);
 	sprintf(buffer, "%s >> %s", info->content, filepath);
 	system(buffer);
 	return;
-
 }
 
 static void handler_dump_file(struct slog_info *info, char *filepath)
@@ -110,16 +112,16 @@ static void handler_dump_file(struct slog_info *info, char *filepath)
 	}
 
 	/* add timestamp */
-        t = time(NULL);
-        localtime_r(&t, &tm);
-        fprintf(fp, "\n============ %s  %02d-%02d-%02d %02d:%02d:%02d  ==============\n",
-				info->log_basename,
-				tm.tm_year % 100,
-				tm.tm_mon + 1,
-				tm.tm_mday,
-				tm.tm_hour,
-				tm.tm_min,
-				tm.tm_sec);
+	t = time(NULL);
+	localtime_r(&t, &tm);
+	fprintf(fp, "\n============ %s  %02d-%02d-%02d %02d:%02d:%02d  ==============\n",
+			info->log_basename,
+			tm.tm_year % 100,
+			tm.tm_mon + 1,
+			tm.tm_mday,
+			tm.tm_hour,
+			tm.tm_min,
+			tm.tm_sec);
 	/* recording... */
 	while( (ret = fread(buffer, 1, 4096, fcmd)) > 0)
 		fwrite(buffer, 1, ret, fp);
@@ -142,7 +144,7 @@ void exec_or_dump_content(struct slog_info *info, char *filepath)
 	char buffer[MAX_NAME_LEN];
 
 	/* slog_enable on/off state will control all snapshot log */
-	if(slog_enable == 0)
+	if(slog_enable != SLOG_ENABLE)
 		return;
 
 	/* misc_log on/off state will control all snapshot log */
@@ -188,13 +190,13 @@ int capture_by_name(struct slog_info *head, const char *name, char *filepath)
 
 static int capture_snap_for_last(struct slog_info *head)
 {
-        struct slog_info *info = head;
-        while(info) {
+	struct slog_info *info = head;
+	while(info) {
 		if(info->level == 7)
 			exec_or_dump_content(info, NULL);
-                info = info->next;
-        }
-        return 0;
+		info = info->next;
+	}
+	return 0;
 }
 
 
@@ -203,32 +205,32 @@ static int capture_all(struct slog_info *head)
 	char filepath[MAX_NAME_LEN];
 	int ret;
 	time_t t;
-        struct tm tm;
+	struct tm tm;
 	struct slog_info *info = head;
 
 	/* slog_enable on/off state will control all snapshot log */
-	if(slog_enable == 0)
+	if(slog_enable != SLOG_ENABLE)
 		return 0;
 
 	if(!head)
 		return 0;
 
 	sprintf(filepath, "%s/%s/%s", current_log_path, top_logdir, info->log_path);
-        ret = mkdir(filepath, S_IRWXU | S_IRWXG | S_IRWXO);
-        if(-1 == ret && (errno != EEXIST)){
-                err_log("mkdir %s failed.", filepath);
-                exit(0);
-        }
+	ret = mkdir(filepath, S_IRWXU | S_IRWXG | S_IRWXO);
+	if(-1 == ret && (errno != EEXIST)) {
+		err_log("mkdir %s failed.", filepath);
+		exit(0);
+	}
 
-        t = time(NULL);
-        localtime_r(&t, &tm);
+	t = time(NULL);
+	localtime_r(&t, &tm);
 	sprintf(filepath, "%s/%s/%s/snapshot_%02d%02d%02d.log",
 				current_log_path,
 				top_logdir,
 				info->log_path,
-                                tm.tm_hour,
-                                tm.tm_min,
-                                tm.tm_sec
+				tm.tm_hour,
+				tm.tm_min,
+				tm.tm_sec
 	);
 
 	while(info) {
@@ -241,49 +243,47 @@ static int capture_all(struct slog_info *head)
 
 static void handler_last_dir()
 {
-        DIR *p_dir;
-        struct dirent *p_dirent;
-        int log_num = 0, last_flag =0, ret;
-        char buffer[MAX_NAME_LEN];
+	DIR *p_dir;
+	struct dirent *p_dirent;
+	int log_num = 0, last_flag =0, ret;
+	char buffer[MAX_NAME_LEN];
 
-        if(( p_dir = opendir(current_log_path)) == NULL)
-                {
-                        err_log("can not open %s.", current_log_path);
-                        return;
-                }
+	if(( p_dir = opendir(current_log_path)) == NULL) {
+		err_log("can not open %s.", current_log_path);
+		return;
+	}
 
-        while((p_dirent = readdir(p_dir)))
-                {
-                        if( !strncmp(p_dirent->d_name, "20", 2) ) {
-                                log_num += 1;
-                        }else if( !strncmp(p_dirent->d_name, LAST_LOG, 3) ){
-                                last_flag = 1;
-                        }
-                }
+	while((p_dirent = readdir(p_dir))) {
+		if( !strncmp(p_dirent->d_name, "20", 2) ) {
+			log_num += 1;
+		}else if( !strncmp(p_dirent->d_name, LAST_LOG, 3) ) {
+			last_flag = 1;
+		}
+	}
 
-        if(log_num < LOG_DIR_NUM){
-                closedir(p_dir);
-                return;
-        }
+	if(log_num < LOG_DIR_NUM){
+		closedir(p_dir);
+		return;
+	}
 
-        if(last_flag == 1 && slog_save_all == 0){
+	if(last_flag == 1 && slog_save_all == 0) {
 		sprintf(buffer, "rm -r %s/%s/", current_log_path, LAST_LOG);
-                system(buffer);
-        }
+		system(buffer);
+	}
 
 	sprintf(buffer, "%s/%s/", current_log_path, LAST_LOG);
 	ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
-	if(-1 == ret && (errno != EEXIST)){
+	if(-1 == ret && (errno != EEXIST)) {
 		err_log("mkdir %s failed.", buffer);
 		exit(0);
 	}
 
-        sprintf(buffer, "%s %s/%s %s/%s", "mv", current_log_path, "20*", current_log_path, LAST_LOG);
-        debug_log("%s\n", buffer);
-        system(buffer);
+	sprintf(buffer, "%s %s/%s %s/%s", "mv", current_log_path, "20*", current_log_path, LAST_LOG);
+	debug_log("%s\n", buffer);
+	system(buffer);
 
-        closedir(p_dir);
-        return;
+	closedir(p_dir);
+	return;
 }
 
 /*
@@ -291,29 +291,27 @@ static void handler_last_dir()
  */
 static int cp_internal_to_external()
 {
-        DIR *p_dir;
-        struct dirent *p_dirent;
+	DIR *p_dir;
+	struct dirent *p_dirent;
 	char buffer[MAX_NAME_LEN];
 
-        if(( p_dir = opendir(INTERNAL_LOG_PATH)) == NULL)
-                {
-                        err_log("can not open %s.", current_log_path);
-                        return 0;
-                }
+	if(( p_dir = opendir(INTERNAL_LOG_PATH)) == NULL) {
+		err_log("can not open %s.", current_log_path);
+		return 0;
+	}
 
-        while((p_dirent = readdir(p_dir)))
-                {
-                        if( !strncmp(p_dirent->d_name, "20", 2) ) {
-				strcpy(top_logdir, p_dirent->d_name);
-				sprintf(buffer, "tar c %s | tar x -C %s/", p_dirent->d_name, external_storage);
-				if(chdir(INTERNAL_LOG_PATH) == -1){
-					err_log("chdir %s failed!", INTERNAL_LOG_PATH);
-				}
-				system(buffer);
-				debug_log("%s", buffer);
-				return 1;
-                        }
-                }
+	while((p_dirent = readdir(p_dir))) {
+		if( !strncmp(p_dirent->d_name, "20", 2) ) {
+			strcpy(top_logdir, p_dirent->d_name);
+			sprintf(buffer, "tar c %s | tar x -C %s/", p_dirent->d_name, external_storage);
+			if(chdir(INTERNAL_LOG_PATH) == -1){
+				err_log("chdir %s failed!", INTERNAL_LOG_PATH);
+			}
+			system(buffer);
+			debug_log("%s", buffer);
+			return 1;
+		}
+	}
 
 	return 0;
 }
@@ -324,7 +322,7 @@ static void handler_modem_memory_log()
 	struct stat st;
 
 	sprintf(path, "%s/modem_memory.log", external_path);
-	if(!stat(path, &st)){
+	if(!stat(path, &st)) {
 		sprintf(path, "mv %s/modem_memory.log %s/%s/misc/", external_path, current_log_path, top_logdir);
 		system(path);
 	}
@@ -357,7 +355,7 @@ static void create_log_dir()
 	sprintf(path, "%s/%s", current_log_path, top_logdir);
 
 	ret = mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO);
-	if (-1 == ret && (errno != EEXIST)){
+	if (-1 == ret && (errno != EEXIST)) {
 		err_log("mkdir %s failed.", path);
 		exit(0);
 	}
@@ -368,25 +366,23 @@ static void create_log_dir()
 
 static void use_ori_log_dir()
 {
-        DIR *p_dir;
-        struct dirent *p_dirent;
-        int log_num = 0;
+	DIR *p_dir;
+	struct dirent *p_dirent;
+	int log_num = 0;
 
-        if(( p_dir = opendir(current_log_path)) == NULL)
-                {
-                        err_log("Can't open %s.", current_log_path);
-                        return;
-                }
+	if(( p_dir = opendir(current_log_path)) == NULL) {
+		err_log("Can't open %s.", current_log_path);
+		return;
+	}
 
-        while((p_dirent = readdir(p_dir)))
-                {
-                        if( !strncmp(p_dirent->d_name, "20", 2) ) {
-				strcpy(top_logdir, p_dirent->d_name);
-				log_num = 1;
-				debug_log("%s\n",top_logdir);
-				break;
-                        }
-                }
+	while((p_dirent = readdir(p_dir))) {
+		if( !strncmp(p_dirent->d_name, "20", 2) ) {
+			strcpy(top_logdir, p_dirent->d_name);
+			log_num = 1;
+			debug_log("%s\n",top_logdir);
+			break;
+		}
+	}
 
 	if(log_num == 0)
 		create_log_dir();
@@ -394,9 +390,20 @@ static void use_ori_log_dir()
 	return;
 }
 
+static int handle_low_power()
+{
+	if(slog_enable == SLOG_DISABLE)
+		return 0;
+
+	if(!modem_log_handler_started)
+		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
+
+	return 0;
+}
+
 static int start_sub_threads()
 {
-	if(slog_enable == 0)
+	if(slog_enable != SLOG_ENABLE)
 		return 0;
 
 	if(!stream_log_handler_started)
@@ -407,8 +414,9 @@ static int start_sub_threads()
 		pthread_create(&notify_tid, NULL, notify_log_handler, NULL);
 	if(!bt_log_handler_started)
 		pthread_create(&bt_tid, NULL, bt_log_handler, NULL);
-	if(!modem_log_handler_started)
-		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
+	if(!tcp_log_handler_started)
+		pthread_create(&tcp_tid, NULL, tcp_log_handler, NULL);
+
 	return 0;
 }
 
@@ -474,7 +482,7 @@ static int sdcard_mounted()
 		return 0;
 	}
 
-	while(fgets(buffer, MAX_LINE_LEN, str) != NULL){
+	while(fgets(buffer, MAX_LINE_LEN, str) != NULL) {
 		if(strstr(buffer, external_path)){
 			pclose(str);
 			return 1;
@@ -487,40 +495,39 @@ static int sdcard_mounted()
 
 static int recv_socket(int sockfd, void* buffer, int size)
 {
-        int received = 0, result;
-        while(buffer && (received < size))
-        {
-                result = recv(sockfd, (char *)buffer + received, size - received, MSG_NOSIGNAL);
-                if (result > 0) {
-                        received += result;
-                } else {
-                        received = result;
-                        break;
-                }
-        }
-        return received;
+	int received = 0, result;
+	while(buffer && (received < size)) {
+		result = recv(sockfd, (char *)buffer + received, size - received, MSG_NOSIGNAL);
+		if (result > 0) {
+			received += result;
+		} else {
+			received = result;
+			break;
+		}
+	}
+	return received;
 }
 
 static int send_socket(int sockfd, void* buffer, int size)
 {
-        int result = -1;
-        int ioffset = 0;
-        while(sockfd > 0 && ioffset < size) {
-                result = send(sockfd, (char *)buffer + ioffset, size - ioffset, MSG_NOSIGNAL);
-                if (result > 0) {
-                        ioffset += result;
-                } else {
-                        break;
-                }
-        }
-        return result;
+	int result = -1;
+	int ioffset = 0;
+	while(sockfd > 0 && ioffset < size) {
+		result = send(sockfd, (char *)buffer + ioffset, size - ioffset, MSG_NOSIGNAL);
+		if (result > 0) {
+			ioffset += result;
+		} else {
+			break;
+		}
+	}
+	return result;
 }
 
 int clear_all_log()
 {
 	char cmd[MAX_NAME_LEN];
 
-	slog_enable = 0;
+	slog_enable = SLOG_DISABLE;
 	stop_sub_threads();
 	sleep(3);
 	sprintf(cmd, "rm -r %s", INTERNAL_LOG_PATH);
@@ -598,9 +605,9 @@ static void handle_top_logdir()
 	slog_start_step = atoi(value);
 
 	ret = mkdir(current_log_path, S_IRWXU | S_IRWXG | S_IRWXO);
-	if(-1 == ret && (errno != EEXIST)){
+	if(-1 == ret && (errno != EEXIST)) {
 		err_log("mkdir %s failed.", current_log_path);
-                exit(0);
+		exit(0);
 	}
 
 	if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH))) {
@@ -619,14 +626,14 @@ static void handle_top_logdir()
 	} else {
 		debug_log("slog use external storage");
 		switch(slog_start_step){
-                case 1:
+		case 1:
 			create_log_dir();
 			handler_modem_memory_log();
 			property_set("slog.step", "2");
-                        break;
-                default:
+		break;
+		default:
 			use_ori_log_dir();
-                        break;
+			break;
 		}
 	}
 }
@@ -642,10 +649,12 @@ static int start_monitor_sdcard_fun()
 			current_log_path = INTERNAL_LOG_PATH;
 		else {
 			/*avoid can't unload SD card*/
-			sleep(TIMEOUT_FOR_SD_MOUNT);
+			sleep(TIMEOUT_FOR_SD_MOUNT *2);
 			current_log_path = external_storage;
 		}
 		/* create a sdcard monitor thread */
+		if(slog_enable != SLOG_ENABLE)
+			return 0;
 		pthread_create(&sdcard_tid, NULL, monitor_sdcard_fun, NULL);
 	} else
 		current_log_path = INTERNAL_LOG_PATH;
@@ -659,10 +668,12 @@ static int start_monitor_sdcard_fun()
  */
 static int do_init()
 {
-	if(slog_enable == 0)
+	if(slog_enable != SLOG_ENABLE)
 		return 0;
 
 	handle_top_logdir();
+
+	capture_all(snapshot_log_head);
 
 	/* all backend log capture handled by follows threads */
 	start_sub_threads();
@@ -674,9 +685,8 @@ void *command_handler(void *arg)
 {
 	struct slog_cmd cmd;
 	struct sockaddr_un serv_addr;
-        int ret, server_sock, client_sock;
+	int ret, server_sock, client_sock;
 	char filename[MAX_NAME_LEN];
-	struct stat st;
 	time_t t;
 	struct tm tm;
 
@@ -709,7 +719,7 @@ void *command_handler(void *arg)
 			sleep(1);
 			continue;
 		}
-                ret = recv_socket(client_sock, (void *)&cmd, sizeof(cmd));
+		ret = recv_socket(client_sock, (void *)&cmd, sizeof(cmd));
 		if(ret <  0) {
 			err_log("recv data failed!");
 			close(client_sock);
@@ -740,7 +750,7 @@ void *command_handler(void *arg)
 			ret = -1;
 			break;
 		case CTRL_CMD_TYPE_OFF:
-			slog_enable = 0;
+			slog_enable = SLOG_DISABLE;
 			ret = stop_sub_threads();
 			sleep(3);
 			break;
@@ -758,29 +768,21 @@ void *command_handler(void *arg)
 			if (-1 == ret && (errno != EEXIST)){
 				err_log("mkdir /data/log failed.");
 			}
-			if(stat(HOOK_MODEM_TARGET_DIR, &st)) {
-				err_log("%s doesn't exsit!", HOOK_MODEM_TARGET_DIR);
-				break;
-			}
-			sprintf(filename, "%s/modem", INTERNAL_LOG_PATH);
-			if(chdir(filename) == -1) {
-				err_log("chdir %s failed!", filename);
-				break;
-			}
-			if(stat("modem.log", &st) != 0)
-				break;
 			ret = 0;
-			system("tar c modem.log | tar x -C /data/log");
-			if(stat("modem.log.1", &st) != 0)
-				break;
-			system("tar c modem.log.1 | tar x -C /data/log");
+			hook_modem_flag = 1;
 			break;
 		case CTRL_CMD_TYPE_SCREEN:
-			if(slog_enable == 0)
+			if(slog_enable != SLOG_ENABLE)
 				break;
 			if(cmd.content[0])
 				ret = screen_shot(cmd.content);
 			else {
+				sprintf(filename, "%s/%s/misc", current_log_path, top_logdir);
+				ret = mkdir(filename, S_IRWXU | S_IRWXG | S_IRWXO);
+				if(-1 == ret && (errno != EEXIST)){
+					err_log("mkdir %s failed.", filename);
+					exit(0);
+				}
 				t = time(NULL);
 				localtime_r(&t, &tm);
 				sprintf(filename, "%s/%s/misc/screenshot_%02d%02d%02d.jpg",
@@ -841,10 +843,10 @@ void create_pidfile()
 
 write_pid:
 	ret = mkdir(TMP_FILE_PATH, S_IRWXU | S_IRWXG | S_IRWXO);
-        if (-1 == ret && (errno != EEXIST)){
-                err_log("mkdir %s failed.", TMP_FILE_PATH);
-                exit(0);
-        }
+	if (-1 == ret && (errno != EEXIST)) {
+		err_log("mkdir %s failed.", TMP_FILE_PATH);
+		exit(0);
+	}
 
 	fp = fopen(PID_FILE, "w");
 	if(fp == NULL) {
@@ -875,10 +877,11 @@ static void sig_handler2(int sig)
  */
 static void setup_signals()
 {
-        struct sigaction act;
-        memset(&act, 0, sizeof(act));
-        sigemptyset(&act.sa_mask);
-        act.sa_flags = 0;
+	struct sigaction act;
+
+	memset(&act, 0, sizeof(act));
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
 
 #define SIGNAL(s, handler)      do { \
 		act.sa_handler = handler; \
@@ -886,7 +889,7 @@ static void setup_signals()
 			err_log("Couldn't establish signal handler (%d): %m", s); \
 	} while (0)
 
-        SIGNAL(SIGTERM, sig_handler1);
+	SIGNAL(SIGTERM, sig_handler1);
 	SIGNAL(SIGBUS, sig_handler1);
 	SIGNAL(SIGSEGV, sig_handler1);
 	SIGNAL(SIGHUP, sig_handler1);
@@ -937,6 +940,8 @@ int main(int argc, char *argv[])
 
 	/* backend capture threads started here */
 	do_init();
+
+	handle_low_power();
 
 	while(1) sleep(10);
 	return 0;
