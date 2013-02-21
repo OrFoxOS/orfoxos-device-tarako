@@ -58,9 +58,9 @@ on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
 
-service mfserial /system/bin/mfserial ts0710mux9 ttyS1 1
-    class main
-    user root
+#service mfserial /system/bin/mfserial ts0710mux9 ttyS1 1
+#    class main
+#    user root
 
 #start rawdata daemon.
 service rawdatad /bin/rawdatad
@@ -112,6 +112,10 @@ service engmodemclient /system/bin/engmodemclient
 service engsetmacaddr /system/bin/engsetmacaddr
     class main
     oneshot
+
+service usbmond /system/bin/usbmond
+    class main
+    user root
 
 service phoneserver /system/bin/phoneserver
     class main
