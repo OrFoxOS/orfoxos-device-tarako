@@ -57,7 +57,9 @@ PRODUCT_PACKAGES += \
     SprdNote \
     CallFireWall \
     ValidationTools \
-    libvalidationtoolsjni
+    libvalidationtoolsjni \
+    libstagefright_soft_mpeg4dec_sprd \
+    libstagefright_soft_h264dec_sprd
 
 # prebuild files
 PRODUCT_PACKAGES += \
