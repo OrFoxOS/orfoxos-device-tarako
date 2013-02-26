@@ -6626,7 +6626,7 @@ LOCAL const SENSOR_REG_T HI351_common[]=
 	//{0x0c, 0xf0}, //Parallel Line Off
 	
 	{0x03, 0x00},
-	{0x11, 0x83}, // STEVE 0frame skip, XY flip 
+	{0x11, 0x80}, // STEVE 0frame skip, XY flip 
 	{0x01, 0xf0}, //sleep off
 	
 	{0x03, 0xC0},
@@ -6696,7 +6696,7 @@ LOCAL const SENSOR_REG_T HI351_640X480[]=
 	
 	{0x03, 0x00}, 
 	{0x10, 0x10}, //Sub1/2 + Pre1
-	{0x11, 0x83}, // STEVE 0 skip Fix Frame Off, XY Flip
+	{0x11, 0x80}, // STEVE 0 skip Fix Frame Off, XY Flip
 	{0x13, 0x80}, //Fix AE Set Off
 	{0x14, 0x70}, // for Pre2mode
 	{0x17, 0x04}, // for Pre2mode
