@@ -268,20 +268,14 @@ int eng_atdiag_hdlr(unsigned char *buf,int len, char* rsp)
 	switch(type) {
 		case CMD_USER_VER:
 			rlen=eng_diag_getver(buf,len, rsp);
+            ENG_LOG("%s: rlen=%d\n",__FUNCTION__, rlen);
+            // Send response
+            memset(eng_atdiag_buf, 0, sizeof(eng_atdiag_buf));
+            memcpy(eng_atdiag_buf, rsp, rlen);
+            rlen = eng_atdiag_rsp(eng_get_csclient_fd(), eng_atdiag_buf, rlen);
 			break;
 	}
 
-	if(type != CMD_COMMON) {
-		memset(eng_diag_buf, 0, sizeof(eng_diag_buf));
-		memset(eng_atdiag_buf, 0, sizeof(eng_atdiag_buf));
-		memcpy((char*)&head,buf,sizeof(MSG_HEAD_T));
-		head.len = sizeof(MSG_HEAD_T)+rlen;
-		ENG_LOG("%s: head.len=%d\n",__FUNCTION__, head.len);
-		memcpy(eng_diag_buf,&head,sizeof(MSG_HEAD_T));
-		memcpy(eng_diag_buf+sizeof(MSG_HEAD_T),rsp,rlen);
-		rlen = eng_hex2ascii(eng_diag_buf, eng_atdiag_buf, head.len);
-		rlen = eng_atdiag_rsp(eng_get_csclient_fd(), eng_atdiag_buf, rlen);
-	}
 
 	return rlen;
 }
