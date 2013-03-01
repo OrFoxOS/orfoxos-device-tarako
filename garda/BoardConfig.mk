@@ -46,6 +46,9 @@ BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
 # use default init.rc
 TARGET_PROVIDES_INIT_RC := true
 
+USE_UI_OVERLAY := true
+USE_SPRD_HWCOMPOSER := true
+
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
 BOARD_USES_ALSA_AUDIO := false
