@@ -36,6 +36,7 @@ int slog_enable = SLOG_ENABLE;
 int screenshot_enable = 1;
 int slog_save_all = 0;
 int slog_start_step = 0;
+int slog_init_complete = 0;
 int stream_log_handler_started = 0;
 int snapshot_log_handler_started = 0;
 int notify_log_handler_started = 0;
@@ -282,6 +283,9 @@ static void handler_last_dir()
 	debug_log("%s\n", buffer);
 	system(buffer);
 
+	sprintf(buffer, "%s %s/%s", "rm -r", current_log_path, "20*");
+	system(buffer);
+
 	closedir(p_dir);
 	return;
 }
@@ -416,7 +420,6 @@ static int start_sub_threads()
 		pthread_create(&bt_tid, NULL, bt_log_handler, NULL);
 	if(!tcp_log_handler_started)
 		pthread_create(&tcp_tid, NULL, tcp_log_handler, NULL);
-
 	return 0;
 }
 
@@ -678,6 +681,8 @@ static int do_init()
 	/* all backend log capture handled by follows threads */
 	start_sub_threads();
 
+	slog_init_complete = 1;
+
 	return 0;
 }
 
@@ -772,7 +777,7 @@ void *command_handler(void *arg)
 			hook_modem_flag = 1;
 			break;
 		case CTRL_CMD_TYPE_SCREEN:
-			if(slog_enable != SLOG_ENABLE)
+			if(slog_enable != SLOG_ENABLE || slog_init_complete == 0)
 				break;
 			if(cmd.content[0])
 				ret = screen_shot(cmd.content);

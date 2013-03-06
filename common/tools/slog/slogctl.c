@@ -60,19 +60,21 @@ recv_socket(int sockfd, void* buffer, int size)
 void update_conf(const char *keyword)
 {
 	FILE *fp;
-	int len, ret;
-	char *pt, buffer[MAX_LINE_LEN];
+	int len = 0;
+	char buffer[MAX_LINE_LEN], line[MAX_NAME_LEN];
 
 	fp = fopen(TMP_SLOG_CONFIG, "r");
 	if(fp == NULL) {
 		perror("open conf failed!\n");
 		return;
 	}
-	len = fread(buffer, 1, MAX_LINE_LEN, fp);
-	if(len <= 0) {
-		perror("read conf failed!\n");
-		fclose(fp);
-		return;
+
+	while(fgets(line, MAX_NAME_LEN, fp) != NULL) {
+		if(!strncmp("enable", line, 6) || !strncmp("disable", line, 7) || !strncmp("low_power", line, 8)) {
+			len += sprintf(buffer + len, "%s\n", keyword);
+		} else {
+			len += sprintf(buffer + len, "%s", line);
+		}
 	}
 	fclose(fp);
 	fp = fopen(TMP_SLOG_CONFIG, "w");
@@ -80,24 +82,8 @@ void update_conf(const char *keyword)
 		perror("open conf failed!\n");
 		return;
 	}
-	fprintf(fp, "%s\n", keyword);
-	pt = strstr(buffer, "enable");
-	if(pt != NULL) {
-		pt = pt + 7;
-		goto find;
-	}
-	pt = strstr(buffer, "disable");
-	if(pt != NULL) {
-		pt = pt + 8;
-		goto find;
-	}
-	pt = strstr(buffer, "low_power");
-	if(pt != NULL) {
-		pt = pt + 10;
-		goto find;
-	}
-find:
-	fprintf(fp, "%s", pt);
+
+	fprintf(fp, "%s", buffer);
 	fclose(fp);
 	return;
 }

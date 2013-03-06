@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Spreadtrum Communications Inc.
+//                 Last Change:  2013-03-06 09:39:00
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -211,7 +212,7 @@ static void handle_notify_file(int wd, const char *name)
 		}
 
 		gettimeofday(&info->current, NULL);
-		if(info->current.tv_sec > info->last.tv_sec + 10) {
+		if(info->current.tv_sec > info->last.tv_sec + 20) {
 			info->last.tv_sec = info->current.tv_sec;
 		} else {
 			return;
@@ -473,6 +474,47 @@ static void strinst(char* dest, char* src)
 
 	return;
 }
+
+/*
+ * The file name to upgrade
+ */
+static void file_name_rotate(char *buf)
+{
+	int i, err;
+
+	for (i = MAXROLLLOGS ; i > 0 ; i--) {
+		char *file0, *file1;
+
+		err = asprintf(&file1, "%s.%d", buf, i);
+		if(err == -1){
+			err_log("asprintf return err!");
+			exit(0);
+		}
+		if (i - 1 == 0) {
+			err = asprintf(&file0, "%s", buf);
+			if(err == -1){
+				err_log("asprintf return err!");
+				exit(0);
+			}
+		} else {
+			err = asprintf(&file0, "%s.%d", buf, i - 1);
+			if(err == -1){
+				err_log("asprintf return err!");
+				exit(0);
+			}
+		}
+
+		err = rename (file0, file1);
+
+		if (err < 0 && errno != ENOENT) {
+			perror("while rotating log files");
+		}
+
+		free(file1);
+		free(file0);
+	}
+}
+
 /*
  *  File volume
  *
@@ -488,27 +530,7 @@ static void rotatelogs(struct slog_info *info)
 
 	close(info->fd_out);
 
-	for (i = MAXROLLLOGS ; i > 0 ; i--) {
-		char *file0, *file1;
-
-		asprintf(&file1, "%s.%d", buffer, i);
-
-		if (i - 1 == 0) {
-			asprintf(&file0, "%s", buffer);
-		} else {
-			asprintf(&file0, "%s.%d", buffer, i - 1);
-		}
-
-		err = rename (file0, file1);
-
-		if (err < 0 && errno != ENOENT) {
-			perror("while rotating log files");
-		}
-
-		free(file1);
-		free(file0);
-	}
-
+	file_name_rotate(buffer);
 	info->fd_out = gen_outfd(info);
 	info->outbytecount = 0;
 }
@@ -593,6 +615,8 @@ void *modem_log_handler(void *arg)
 	int old_flags = 0, ret;
 	int data_fd;
 	char buffer[MAX_NAME_LEN];
+	time_t t;
+	struct tm tm;
 
 	if(slog_enable == SLOG_DISABLE)
 		return NULL;
@@ -609,9 +633,7 @@ void *modem_log_handler(void *arg)
 		open_device(info, MODEM_LOG_SOURCE);
 		old_flags = fcntl(info->fd_device, F_GETFL);
 
-		if(slog_enable == SLOG_ENABLE &&
-			strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) &&
-			info->state == SLOG_STATE_ON)
+		if(slog_enable == SLOG_ENABLE && info->state == SLOG_STATE_ON)
 			info->fd_out = gen_outfd(info);
 		else
 			info->fd_out = -1;
@@ -657,7 +679,12 @@ void *modem_log_handler(void *arg)
 		if(hook_modem_flag != 1)
 			continue;
 
-		sprintf(buffer, "/data/log/modem.log");
+		/* add timestamp */
+		t = time(NULL);
+		localtime_r(&t, &tm);
+		sprintf(buffer, "/data/log/modem_%d%02d%02d%02d%02d.log",
+					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+
 		data_fd = open(buffer, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
 		if(data_fd < 0) {
 			err_log("open modem log failed!");
@@ -884,27 +911,8 @@ void *bt_log_handler(void *arg)
 		}
 		sprintf(buffer, "%s/%s/%s/%s.log",
 			current_log_path, top_logdir, bt->log_path, bt->log_basename);
+		file_name_rotate(buffer);
 
-		for (i = MAXROLLLOGS ; i > 0 ; i--) {
-			char *file0, *file1;
-
-			asprintf(&file1, "%s.%d", buffer, i);
-
-			if (i - 1 == 0) {
-				asprintf(&file0, "%s", buffer);
-			} else {
-				asprintf(&file0, "%s.%d", buffer, i - 1);
-			}
-
-			err = rename (file0, file1);
-
-			if (err < 0 && errno != ENOENT) {
-				perror("while rotating log files");
-			}
-
-			free(file1);
-			free(file0);
-		}
 #ifdef SLOG_BTLOG_235
 		execl("/system/xbin/hcidump", "hcidump", "-Bw", buffer, (char *)0);
 #else
@@ -962,27 +970,7 @@ void *tcp_log_handler(void *arg)
 		}
 		sprintf(buffer, "%s/%s/%s/%s.log",
 			current_log_path, top_logdir, tcp->log_path, tcp->log_basename);
-
-		for (i = MAXROLLLOGS ; i > 0 ; i--) {
-			char *file0, *file1;
-
-			asprintf(&file1, "%s.%d", buffer, i);
-
-			if (i - 1 == 0) {
-				asprintf(&file0, "%s", buffer);
-			} else {
-				asprintf(&file0, "%s.%d", buffer, i - 1);
-			}
-
-			err = rename (file0, file1);
-
-			if (err < 0 && errno != ENOENT) {
-				perror("while rotating log files");
-			}
-
-			free(file1);
-			free(file0);
-		}
+		file_name_rotate(buffer);
 
 		execl("/system/xbin/tcpdump", "tcpdump", "-i", "any", "-p", "-s 0", "-w", buffer, (char *)0);
 		exit(0);
