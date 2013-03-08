@@ -498,21 +498,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
     if(adev->eq_available)
         vb_effect_sync_devices(cur_devices);
 
-    /* Turn on new devices first so we don't glitch due to powerdown... */
-    for (i = 0; i < adev->num_dev_cfgs; i++)
-	if (cur_devices & adev->dev_cfgs[i].mask) {
-#ifdef _VOICE_CALL_VIA_LINEIN
-	    if (((AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | AUDIO_DEVICE_OUT_ALL_FM) ==  adev->dev_cfgs[i].mask)
-	        && adev->call_start == 1) {
-	        ALOGI("call_start now, on devices is (0x%08x)", cur_devices);
-	        continue;
-	    }
-#endif
-	    set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
-			       adev->dev_cfgs[i].on_len);
-    }
-
-    /* ...then disable old ones. */
+    /* disable old ones. */
     for (i = 0; i < adev->num_dev_cfgs; i++)
 	if (!(cur_devices & adev->dev_cfgs[i].mask)) {
 #ifdef _VOICE_CALL_VIA_LINEIN
@@ -524,6 +510,20 @@ static void do_select_devices(struct tiny_audio_device *adev)
 #endif
 	    set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
 			       adev->dev_cfgs[i].off_len);
+    }		
+		
+    /* Turn on new devices */
+    for (i = 0; i < adev->num_dev_cfgs; i++)
+	if (cur_devices & adev->dev_cfgs[i].mask) {
+#ifdef _VOICE_CALL_VIA_LINEIN
+	    if (((AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | AUDIO_DEVICE_OUT_ALL_FM) ==  adev->dev_cfgs[i].mask)
+	        && adev->call_start == 1) {
+	        ALOGI("call_start now, on devices is (0x%08x)", cur_devices);
+	        continue;
+	    }
+#endif
+	    set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
+			       adev->dev_cfgs[i].on_len);
     }
 
     /* update EQ profile*/
