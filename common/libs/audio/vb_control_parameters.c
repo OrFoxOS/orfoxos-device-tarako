@@ -21,7 +21,7 @@
 #ifdef MY_DEBUG
 #define MY_TRACE    ALOGW
 #else
-#define MY_TRACE
+#define MY_TRACE(...)
 #endif
 
 #define VBC_CMD_TAG   "VBC"
@@ -364,9 +364,7 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     }else if(pga_gain_nv->devices & AUDIO_DEVICE_OUT_FM_SPEAKER){
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_l,"linein-spk-l");
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_r,"linein-spk-r");
-    }
-    
-    if((pga_gain_nv->devices & AUDIO_DEVICE_IN_BUILTIN_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_BACK_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
+    }else if((pga_gain_nv->devices & AUDIO_DEVICE_IN_BUILTIN_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_BACK_MIC) || (pga_gain_nv->devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
         audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_l,"capture-l");
 	    audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_r,"capture-r");
     }
@@ -763,10 +761,20 @@ RESTART:
         /* read parameters common head of the packet.*/
         ret = ReadParas_Head(s_vbpipe_fd, &read_common_head);
         if (ret < 0) {
-            ALOGE("Error, %s read head failed(c), need to read again ",__func__,strerror(errno));
+            ALOGE("Error, %s read head failed(%s), need to read again ",__func__,strerror(errno));
             continue;
         }else if (ret == 0) {   //cp something wrong
             ALOGE("Error, %s read head failed(%s), need to reopen vbpipe ",__func__,strerror(errno));
+            if(adev->call_start){                  //cp crash during call
+                mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, 1);  //switch to arm
+                pthread_mutex_lock(&adev->lock);
+                force_all_standby(adev);
+                pcm_close(adev->pcm_modem_ul);
+                pcm_close(adev->pcm_modem_dl);
+                adev->call_start = 0;
+                adev->call_connected = 0;
+                pthread_mutex_unlock(&adev->lock);
+            }
 	        sleep(1);
             close(s_vbpipe_fd);
             s_vbpipe_fd = -1;
