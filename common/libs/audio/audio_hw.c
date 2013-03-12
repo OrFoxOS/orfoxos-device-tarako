@@ -643,7 +643,7 @@ static int start_output_stream(struct tiny_stream_out *out)
         old_pcm_config=out->config;
         out->config = pcm_config_vplayback;
         out->buffer_vplayback = malloc(RESAMPLER_BUFFER_SIZE);
-        out->pcm_vplayback = pcm_open(card, port, PCM_OUT|PCM_MMAP , &out->config);
+        out->pcm_vplayback = pcm_open(card, port, PCM_OUT, &out->config);
 
         if (!pcm_is_ready(out->pcm_vplayback)) {
             out->config = old_pcm_config ;
@@ -1064,7 +1064,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
                                                                 (int16_t *)out->buffer_vplayback,
                                                                 &out_frames);
             buf = out->buffer_vplayback;
-            ret = pcm_mmap_write(out->pcm_vplayback, (void *)buf, out_frames*frame_size);
+            ret = pcm_write(out->pcm_vplayback, (void *)buf, out_frames*frame_size);
         }
         else
             usleep(out_frames*1000*1000/out->config.rate);
