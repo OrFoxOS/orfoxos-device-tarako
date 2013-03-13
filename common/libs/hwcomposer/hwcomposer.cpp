@@ -38,7 +38,7 @@
 #include "scale_rotate.h"
 
 #include <binder/MemoryHeapIon.h>
-
+#include <cutils/properties.h>
 #define SPRD_ION_DEV "/dev/ion"
 
 #define OVERLAY_BUF_NUM 2
@@ -106,7 +106,7 @@ struct hwc_context_t {
     volatile void * osd_proc_cmd;
 #endif
 };
-
+static int debugenable = 0;
 inline int MIN(int x, int y) {
     return ((x < y) ? x : y);
 }
@@ -584,10 +584,10 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 	hwc_layer_t * overlay_video = NULL;
 	hwc_layer_t * overlay_osd = NULL;
 
-	if( !list || (!(list->flags & HWC_GEOMETRY_CHANGED)))
+	if(!list)
 		return 0;
 
-	ALOGI("hwc_prepare %d b", list->numHwLayers);
+	ALOGI_IF(debugenable,"hwc_prepare %d b", list->numHwLayers);
 	ctx->fb_layer_count = 0;
 	ctx->osd_overlay_flag = 0;
 	ctx->video_overlay_flag = 0;
@@ -597,7 +597,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 		list->hwLayers[i].compositionType = HWC_FRAMEBUFFER;
 		if((list->hwLayers[i].flags & HWC_SKIP_LAYER)|| !list->hwLayers[i].handle) {
 			ctx->fb_layer_count++;
-			ALOGI("skip_layer %p",list->hwLayers[i].handle);
+			ALOGI_IF(debugenable , "skip_layer %p",list->hwLayers[i].handle);
 			continue;
 		}
 
@@ -607,7 +607,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 			list->hwLayers[i].compositionType = HWC_OVERLAY;
 			//list->hwLayers[i].hints = HWC_HINT_CLEAR_FB;//must set it???
 			overlay_video = &list->hwLayers[i];
-			ALOGI("find video overlay %d",list->hwLayers[i].handle);
+			ALOGI_IF(debugenable , "find video overlay %d",list->hwLayers[i].handle);
 		} else if((support_overlay == SPRD_LAYERS_OSD) && (ctx->osd_overlay_flag == 0)) {
 			if ( list->numHwLayers >= 3) {
 				ctx->fb_layer_count++;
@@ -616,7 +616,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 				list->hwLayers[i].compositionType = HWC_OVERLAY;
 				//list->hwLayers[i].hints = HWC_HINT_CLEAR_FB;//must set it???
 				overlay_osd = &list->hwLayers[i];
-				ALOGI("find osd overlay %d",list->hwLayers[i].handle);
+				ALOGI_IF(debugenable , "find osd overlay %d",list->hwLayers[i].handle);
 			}
 		}else {
 			ctx->fb_layer_count++;
@@ -627,7 +627,7 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 		overlay_osd->compositionType = HWC_FRAMEBUFFER;
 		ctx->osd_overlay_flag = 0;
 		ctx->fb_layer_count++;
-		ALOGI("no video layer, abandon osd overlay");
+		ALOGI_IF(debugenable , "no video layer, abandon osd overlay");
 	}
 
 	if ((ctx->pre_fb_layer_count != ctx->fb_layer_count) && overlay_video) {
@@ -647,8 +647,8 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 	//}
 
 	ctx->pre_fb_layer_count = ctx->fb_layer_count;
-	ALOGI("fb_layer_count %d",ctx->fb_layer_count);
-	ALOGI("hwc_prepare %d e", list->numHwLayers);
+	ALOGI_IF(debugenable , "fb_layer_count %d",ctx->fb_layer_count);
+	ALOGI_IF(debugenable , "hwc_prepare %d e", list->numHwLayers);
 
 	return 0;
 }
@@ -679,7 +679,12 @@ static int hwc_set(hwc_composer_device_t *dev,
         hwc_layer_list_t* list)
 {
     struct hwc_context_t *ctx = (struct hwc_context_t *)dev;
-
+    char value[PROPERTY_VALUE_MAX];
+    property_get("debug.hwcomposer.info" , value , "0");
+    if(atoi(value) == 1)
+        debugenable = 1;
+    else
+        debugenable = 0;
     if (dpy == NULL && sur == NULL && list == NULL) {
         // release our resources, the screen is turning off
         // in our case, there is nothing to do.
