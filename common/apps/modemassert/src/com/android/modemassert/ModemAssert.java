@@ -43,7 +43,7 @@ public class ModemAssert extends Service {
         try {
             s = new LocalSocket();
             l = new LocalSocketAddress(MODEM_SOCKET_NAME,
-                    LocalSocketAddress.Namespace.RESERVED);
+                    LocalSocketAddress.Namespace.ABSTRACT);
             // add by lg for bug 20109 for 8810_2.3.5
             // l = new LocalSocketAddress(MODEM_SOCKET_NAME,
             // LocalSocketAddress.Namespace.ABSTRACT);

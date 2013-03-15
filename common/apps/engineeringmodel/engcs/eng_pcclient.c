@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include "cutils/sockets.h"
 #include "cutils/properties.h"
+#include <private/android_filesystem_config.h>
 
 //only support 2 sims now!!!!
 #define MAX_CS_SIMS 2
@@ -40,6 +41,32 @@ static const char* TO_MULTI_SIM_CMDS[] = {
 	"AT+SFUN=4",
 	"AT+SFUN=5"
 };
+
+#if PC_DATA_FROM_AT_ROUTER
+int create_pty(char *path)
+{
+	int fdm;
+	char *slavename;
+	char property[64] = {0};
+	extern char *ptsname();
+	fdm = open("/dev/ptmx", O_RDWR);
+	grantpt(fdm);
+	unlockpt(fdm);
+	slavename = ptsname(fdm);
+	unlink(path);
+	ALOGD("[%d]%s --> %s\n", fdm, path, slavename);
+	chmod(slavename, 0664);
+	chown(slavename, AID_SYSTEM, AID_RADIO);
+	sprintf(property, "%s  %s", slavename, path);
+
+	/* set the property */
+	property_set("sys.symlink.umts_router", property);
+	property_set("ctl.stop", "smd_symlink");
+	property_set("ctl.start", "smd_symlink");
+
+	return fdm;
+}
+#endif
 
 #ifdef CONFIG_ENG_UART_USB_AUTO
 static int printk_fd = -1;
@@ -147,8 +174,12 @@ static int eng_pcclient_init(void)
 	pc_client_fd = eng_pcclient_open_device();
 	
 #else
-	pc_client_fd = open(PC_GSER_DEV, O_RDWR);
 
+#if PC_DATA_FROM_AT_ROUTER
+	pc_client_fd =  create_pty("/dev/umts_router");
+#else
+	pc_client_fd = open(PC_GSER_DEV, O_RDWR);
+#endif
 	if(pc_client_fd < 0){
 		ENG_LOG("%s: open %s fail [%s]\n",__FUNCTION__, PC_GSER_DEV, strerror(errno));
 		return -1;
@@ -627,13 +658,13 @@ static void *eng_modemreset_thread(void *par)
 	}
 	
     soc_fd = socket_local_client( MODEM_SOCKET_NAME,
-                         0/*ANDROID_SOCKET_NAMESPACE_RESERVED*/, SOCK_STREAM);
+                         ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 
 	while(soc_fd < 0) {
 		ALOGD("%s: Unable bind server %s, waiting...\n",__func__, MODEM_SOCKET_NAME);
 		usleep(10*1000);
     	soc_fd = socket_local_client( MODEM_SOCKET_NAME,
-                         0/*ANDROID_SOCKET_NAMESPACE_RESERVED*/, SOCK_STREAM);		
+                         ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 	}
 
 	ALOGD("%s, fd=%d, pipe_fd=%d\n",__func__, soc_fd, pipe_fd);
