@@ -145,7 +145,7 @@ static int eng_pcclient_open_device()
 		tcgetattr(port_fd, &ser_settings);
 		cfmakeraw(&ser_settings);
 
-		//tcsetattr(port_fd, TCSANOW, &ser_settings);
+		tcsetattr(port_fd, TCSANOW, &ser_settings);
 	}
 	else{
 		ALOGD("USB disconnected, open uart device");
@@ -168,6 +168,7 @@ static int eng_pcclient_open_device()
 static int eng_pcclient_init(void)
 {
 	int i;
+	int flags;
 	struct termios ser_settings;
 
 #ifdef CONFIG_ENG_UART_USB_AUTO
@@ -180,14 +181,18 @@ static int eng_pcclient_init(void)
 #else
 	pc_client_fd = open(PC_GSER_DEV, O_RDWR);
 #endif
+
 	if(pc_client_fd < 0){
 		ENG_LOG("%s: open %s fail [%s]\n",__FUNCTION__, PC_GSER_DEV, strerror(errno));
 		return -1;
 	}
+
+
+
        tcgetattr(pc_client_fd, &ser_settings);
        cfmakeraw(&ser_settings);
 
-       //tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
+       tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
 
 #endif
 	
@@ -252,6 +257,7 @@ static int eng_atreq(int fd, char *buf, int length)
 
 static int restart_gser(void)
 {
+	int flags;
 	struct termios ser_settings;
 	
 	ENG_LOG("%s ERROR : %s\n", __FUNCTION__, strerror(errno));
@@ -264,11 +270,13 @@ static int restart_gser(void)
 		ENG_LOG("cannot open vendor serial\n");
 		return -1;
 	}
-	
+
+
+
  	tcgetattr(pc_client_fd, &ser_settings);
 	cfmakeraw(&ser_settings);
 
-	//tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
+	tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
 	
 	return 0;
 }
@@ -280,19 +288,18 @@ static int eng_pc2clientbuf(char* databuf, char* readbuf,  int input_len, int* l
 	int is_continue = 1;
 	int buf_len = 0;
 	int ret_val = 0;
+	int cr_lf=0;
 
 	ENG_LOG("%s: Waitting cmd from PC, input_len %d \n", __func__,input_len);
 
 	for(i=0; i < input_len; i++){
-		if ( engbuf[i] == 0xd ){ //\r
-			continue;
-		}
-		else if (engbuf[i]==0x1a){ // ^z
+		ENG_LOG("%x\n",engbuf[i]);
+		if ((engbuf[i]==0x1a)||(engbuf[i]==0x0a)){ 
 			databuf[buf_len]=engbuf[i];
 			buf_len ++;
 			break;
 		}
-		else if ( engbuf[i] == 0xa || buf_len >= ENG_BUFFER_SIZE){ //\n
+		else if (  buf_len >= ENG_BUFFER_SIZE){ 
 			break;
 		}
 		else{
@@ -429,6 +436,71 @@ static void eng_multicmds_modem2pc(int pc_client_fd,char*prev_buf,int plen,char 
 	}
 }
 
+
+static int eng_handle_raw_input(int fd,char * buf){
+
+       int j,ret,ret_char,length = 0,lf_indi = 0;
+       struct timeval val;
+       fd_set readfds;
+       char is_lf;
+
+       for(j = 0; ;) {
+
+               FD_ZERO(&readfds);
+               FD_SET(fd, &readfds);
+               val.tv_sec = 0;
+               val.tv_usec= 10000;
+
+               if(1==lf_indi){
+                   lf_indi = 0;
+                   buf[0] = is_lf;
+                   j = 1;
+               }
+               ret = read(fd, &buf[j], 1);
+               if(ret<=0){
+                       restart_gser();
+                       continue;
+               }
+               //ENG_LOG("read char from pc client is buf[%d]= %x",j,buf[j]);
+               ret_char = buf[j++] ;
+               if( ( 0x0a == ret_char)  || ( 0x1a == ret_char ) ){
+                       length = j;
+                       lf_indi = 0;
+                       return length;
+               }
+               if( 0x0d == ret_char ) {
+                       length = j;
+                       ret = select(fd+1, &readfds, NULL, NULL,&val);
+                       if( 0 == ret ){
+                               ENG_LOG("=======SELECT TIME OUT \n");
+                               lf_indi = 0;
+                       }else if( ret > 0 ){
+                               ret = read(fd, &is_lf, 1);
+                               if( ret<=0 ){
+                                       restart_gser();
+                               }
+                               ENG_LOG("LAST BYTE IS %x",is_lf);
+                               if(0x0a == is_lf){
+                                       buf[j++] = is_lf;
+                                       length = j;
+                                       lf_indi = 0;
+                               }else{
+                                       lf_indi = 1;
+                               }
+                       }else {
+                               lf_indi = 0;
+                               ENG_LOG("=======SELECT \n");
+                               ENG_LOG("%s ERROR2 : %s\n", __FUNCTION__, strerror(errno));
+                       }
+
+                       return length;
+               }
+       };
+}
+
+
+
+
 static void *eng_pcclient_hdlr(void *_param)
 {
 	char databuf[ENG_BUFFER_SIZE];
@@ -442,6 +514,7 @@ static void *eng_pcclient_hdlr(void *_param)
 	int i,total;
 	char* prev_resp_buf=NULL;
 	int prev_len = 0;
+
 
 	ENG_LOG("%s: Run",__FUNCTION__);
 
@@ -459,13 +532,7 @@ static void *eng_pcclient_hdlr(void *_param)
 			continue;
 		}
 
-		length = read(pc_client_fd, readbuf, ENG_BUFFER_SIZE);
-		if (length<=0)
-		{
-			restart_gser();
-			continue;
-		}
-
+		length = eng_handle_raw_input(pc_client_fd,readbuf);
 		ENG_LOG("%s ### data read length %d %s###", __FUNCTION__, length,readbuf);
 
 #ifdef CONFIG_ENG_UART_USB_AUTO
@@ -532,6 +599,9 @@ static void *eng_pcclient_hdlr(void *_param)
 
 	return NULL;
 }
+
+
+
 
 static int cs_sim1_fd;
 int eng_get_csclient_fd(void)
