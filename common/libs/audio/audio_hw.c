@@ -996,13 +996,13 @@ static bool out_bypass_data(struct tiny_audio_device *adev,uint32_t frame_size, 
 {
     /*
         1. There is some time between call_start and call_connected, we should throw away some data here.
-        2. During in  AUDIO_MODE_IN_CALL and not in call_start, we should throw away some data in BT device.
+        2. We should throw away some data in BT device during not in a real call.
         3. If mediaserver crash, we should throw away some pcm data after restarting mediaserver.
         4. After call thread gets stop_call cmd, but hasn't get lock.
     */
     int vbc_2arm =  0;
     vbc_2arm = mixer_ctl_get_value(adev->private_ctl.vbc_switch,0);
-    if (( (!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL) && (adev->devices & AUDIO_DEVICE_OUT_ALL_SCO) )
+    if (( (!adev->call_start) && (adev->devices & (AUDIO_DEVICE_OUT_ALL_SCO | AUDIO_DEVICE_OUT_ALL_A2DP)) )
         || (adev->call_start && (!adev->call_connected)) || ((!vbc_2arm) && (!adev->call_start)) || adev->call_prestop) {
         MY_TRACE("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d) vbc_2arm(%d) call_prestop(%d)...",adev->call_start,adev->mode,adev->devices,adev->call_connected,vbc_2arm,adev->call_prestop);
         usleep(bytes * 1000000 / frame_size / sample_rate);
