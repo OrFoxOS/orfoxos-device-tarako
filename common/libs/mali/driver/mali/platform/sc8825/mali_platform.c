@@ -24,10 +24,26 @@
 #include <mach/regs_ahb.h>
 #include <mach/sci.h>
 
+#include <mach/memfreq_ondemand.h>
+
 #include "mali_kernel_common.h"
 #include "mali_osk.h"
 #include "mali_platform.h"
 
+#define MALI_BANDWIDTH (1600*1024*1024)
+
+u32 calculate_gpu_utilization(void* arg);
+
+static unsigned int mali_memfreq_demand(struct memfreq_dbs *h)
+{
+	u32 bw = calculate_gpu_utilization(NULL);
+	return (MALI_BANDWIDTH>>8)*bw;
+}
+
+static struct memfreq_dbs mali_memfreq_desc = {
+	.level = 0,
+	.memfreq_demand = mali_memfreq_demand,
+};
 
 static struct clk* g_gpu_clock = NULL;
 
@@ -38,6 +54,8 @@ _mali_osk_errcode_t mali_platform_init(void)
 	g_gpu_clock = clk_get(NULL, "clk_gpu_axi");
 
 	MALI_DEBUG_ASSERT(g_gpu_clock);
+
+//	register_memfreq_ondemand (&mali_memfreq_desc);
 
 	sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 	while(sci_glb_read(REG_GLB_G3D_PWR_CTL, BITS_PD_G3D_STATUS(0x1f))) udelay(100);
@@ -57,6 +75,9 @@ _mali_osk_errcode_t mali_platform_deinit(void)
 		clk_disable(g_gpu_clock);
 	}
 	sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
+
+//	unregister_memfreq_ondemand (&mali_memfreq_desc);
+
 	MALI_SUCCESS;
 }
 
