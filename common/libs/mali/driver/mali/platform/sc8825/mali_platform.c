@@ -18,6 +18,7 @@
 #include <linux/clk.h>
 #include <asm/system.h>
 #include <asm/io.h>
+#include <linux/semaphore.h>
 
 #include <mach/hardware.h>
 #include <mach/regs_glb.h>
@@ -45,6 +46,8 @@ static struct memfreq_dbs mali_memfreq_desc = {
 	.memfreq_demand = mali_memfreq_demand,
 };
 
+static DEFINE_SEMAPHORE(g_gpu_clock_lock);
+
 static struct clk* g_gpu_clock = NULL;
 
 static int g_gpu_clock_on = 0;
@@ -57,6 +60,7 @@ _mali_osk_errcode_t mali_platform_init(void)
 
 //	register_memfreq_ondemand (&mali_memfreq_desc);
 
+	down(&g_gpu_clock_lock);
 	sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 	while(sci_glb_read(REG_GLB_G3D_PWR_CTL, BITS_PD_G3D_STATUS(0x1f))) udelay(100);
 	if(!g_gpu_clock_on)
@@ -64,17 +68,20 @@ _mali_osk_errcode_t mali_platform_init(void)
 		g_gpu_clock_on = 1;
 		clk_enable(g_gpu_clock);
 	}
+	up(&g_gpu_clock_lock);
 	MALI_SUCCESS;
 }
 
 _mali_osk_errcode_t mali_platform_deinit(void)
 {
+	down(&g_gpu_clock_lock);
 	if(g_gpu_clock_on)
 	{
 		g_gpu_clock_on = 0;
 		clk_disable(g_gpu_clock);
 	}
 	sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
+	up(&g_gpu_clock_lock);
 
 //	unregister_memfreq_ondemand (&mali_memfreq_desc);
 
@@ -83,6 +90,7 @@ _mali_osk_errcode_t mali_platform_deinit(void)
 
 _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 {
+	down(&g_gpu_clock_lock);
 	switch(power_mode)
 	{
 	case MALI_POWER_MODE_ON:
@@ -113,6 +121,7 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 		sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 		break;
 	};
+	up(&g_gpu_clock_lock);
 	MALI_SUCCESS;
 }
 
