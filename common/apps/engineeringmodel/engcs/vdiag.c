@@ -80,6 +80,26 @@ int get_user_diag_buf(char* buf,int len)
 }
 
 
+int check_audio_para_file_size(char *config_file)
+{
+    int fileSize = 0;
+    int tmpFd;
+
+    ENG_LOG("%s: enter",__FUNCTION__);
+    tmpFd = open(config_file, O_RDONLY);
+    if (tmpFd < 0) {
+        ENG_LOG("%s: open error",__FUNCTION__);
+        return -1;
+    }
+    fileSize = lseek(tmpFd, 0, SEEK_END);
+    if (fileSize <= 0) {
+        ENG_LOG("%s: file size error",__FUNCTION__);
+        return -1;
+    }
+    close(tmpFd);
+    ENG_LOG("%s: check OK",__FUNCTION__);
+    return 0;
+}
 
 int ensure_audio_para_file_exists(char *config_file)
 {
@@ -89,6 +109,7 @@ int ensure_audio_para_file_exists(char *config_file)
     int nread;
     int ret;
 
+    ENG_LOG("%s: enter",__FUNCTION__);
     ret = access(config_file, R_OK|W_OK);
     if ((ret == 0) || (errno == EACCES)) {
         if ((ret != 0) &&
@@ -96,7 +117,10 @@ int ensure_audio_para_file_exists(char *config_file)
             ALOGE("Cannot set RW to \"%s\": %s", config_file, strerror(errno));
             return -1;
         }
-	return 0;
+        if (0 == check_audio_para_file_size(config_file)) {
+            ENG_LOG("%s: ensure OK",__FUNCTION__);
+            return 0;
+        }
     } else if (errno != ENOENT) {
         ALOGE("Cannot access \"%s\": %s", config_file, strerror(errno));
         return -1;
@@ -115,6 +139,7 @@ int ensure_audio_para_file_exists(char *config_file)
         return -1;
     }
 
+    ENG_LOG("%s: start copy",__FUNCTION__);
     while ((nread = read(srcfd, buf, sizeof(buf))) != 0) {
         if (nread < 0) {
             ALOGE("Error reading \"%s\": %s",(char *)(ENG_AUDIO_PARA) , strerror(errno));
@@ -143,6 +168,7 @@ int ensure_audio_para_file_exists(char *config_file)
         unlink(config_file);
         return -1;
     }
+    ENG_LOG("%s: ensure done",__FUNCTION__);
     return 0;
 }
 
