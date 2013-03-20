@@ -1037,7 +1037,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
 #ifndef _VOICE_CALL_VIA_LINEIN
-    if (out_bypass_data(adev,audio_stream_frame_size(&stream->common),out_get_sample_rate(&stream->common),bytes)) {
+    if (out_bypass_data(out,audio_stream_frame_size(&stream->common),out_get_sample_rate(&stream->common),bytes)) {
         //release lock
         return bytes;
     }
