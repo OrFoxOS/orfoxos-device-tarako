@@ -44,7 +44,8 @@ PRODUCT_PACKAGES := \
 	bttest\
 	hostapd \
 	wpa_supplicant.conf \
-    SoundRecorder
+	nvm_daemon \
+	SoundRecorder
 
 # own copyright packages files
 PRODUCT_PACKAGES += \
@@ -61,7 +62,6 @@ PRODUCT_PACKAGES += \
 
 PRODUCT_PACKAGES += \
 	rawdatad \
-	nvitemd \
 	charge \
 	vcharged \
 	poweroff_alarm \
@@ -105,6 +105,7 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/scripts/ext_symlink.sh:system/bin/ext_symlink.sh \
 	$(BOARDDIR)/scripts/ext_data.sh:system/bin/ext_data.sh \
 	$(BOARDDIR)/scripts/ext_kill.sh:system/bin/ext_kill.sh \
+	$(BOARDDIR)/scripts/ext_chown.sh:system/bin/ext_chown.sh \
 	device/sprd/common/res/CDROM/adb.iso:system/etc/adb.iso \
 	device/sprd/common/libs/mali/egl.cfg:system/lib/egl/egl.cfg \
 	device/sprd/common/libs/audio/audio_policy.conf:system/etc/audio_policy.conf \
