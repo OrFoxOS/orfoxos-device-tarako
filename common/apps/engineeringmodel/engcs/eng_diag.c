@@ -13,7 +13,6 @@
 #include "eng_diag.h"
 #include "eng_sqlite.h"
 #include "vlog.h"
-#include "crc16.h"
 #include "string.h"
 #include "eng_audio.h"
 #include "eng_attok.h"
@@ -158,9 +157,11 @@ int eng_diag_user_handle(int type, char *buf,int len)
 		case CMD_USER_VER:
 			rlen=eng_diag_getver((unsigned char*)buf,len, rsp);
 			break;
+/*
 		case CMD_USER_BTWIFI:
 			rlen=eng_diag_btwifi(buf, len, rsp, &extra_len);
 			break;
+*/
 		case CMD_USER_FACTORYMODE:
 			rlen=eng_diag_factorymode(buf, len, rsp);
 			break;
@@ -626,6 +627,7 @@ int eng_diag_encode7d7e(char *buf, int len,int *extra_len)
 
 int eng_diag_btwifi(char *buf,int len, char *rsp, int *extra_len)
 {
+#if 0
 	int rlen,i;
 	int ret=-1;
 	unsigned short crc=0; 
@@ -722,6 +724,8 @@ int eng_diag_btwifi(char *buf,int len, char *rsp, int *extra_len)
 	}
 	ENG_LOG("%s: rlen=%d\n",__func__, rlen);
 	return rlen;
+#endif
+	return 0;
 }
 
 int eng_diag_factorymode(char *buf,int len, char *rsp)
