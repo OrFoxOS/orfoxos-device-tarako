@@ -1459,10 +1459,12 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr)
 			if (SENSOR_SUCCESS == _Sensor_Register(SENSOR_MAIN)) {
 				sensor_num++;
 			}
+			#ifndef CONFIG_FRONT_CAMERA_NONE
 			if (SENSOR_SUCCESS == _Sensor_Register(SENSOR_SUB)) {
 				sensor_num++;
 			}
 			SENSOR_PRINT("1");
+			#endif
 
 			ret_val = Sensor_Open(sensor_id);
 			if (ret_val != SENSOR_SUCCESS ) {
@@ -1475,8 +1477,10 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr)
 			SENSOR_PRINT("Sensor_Init: register sesnor fail, start identify \n");
 			if (_Sensor_Identify(SENSOR_MAIN))
 				sensor_num++;
+			#ifndef CONFIG_FRONT_CAMERA_NONE
 			if (_Sensor_Identify(SENSOR_SUB))
 				sensor_num++;
+			#endif
 			ret_val = Sensor_Open(sensor_id);
 		}
 		s_sensor_identified = SCI_TRUE;

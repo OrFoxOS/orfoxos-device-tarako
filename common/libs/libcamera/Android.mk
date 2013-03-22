@@ -239,6 +239,10 @@ endif
 ifeq ($(strip $(CAMERA_DISP_ION)),true)
 LOCAL_CFLAGS += -DUSE_ION_MEM
 endif
+
+ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_SUPPORT)),false)
+LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_NONE
+endif
         
 LOCAL_MODULE := camera.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
