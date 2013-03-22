@@ -145,6 +145,8 @@ static int eng_pcclient_open_device()
 		tcgetattr(port_fd, &ser_settings);
 		cfmakeraw(&ser_settings);
 
+		ser_settings.c_lflag |= (ECHO | ECHONL);
+		ser_settings.c_lflag &= ~ECHOCTL;
 		tcsetattr(port_fd, TCSANOW, &ser_settings);
 	}
 	else{
@@ -192,6 +194,8 @@ static int eng_pcclient_init(void)
        tcgetattr(pc_client_fd, &ser_settings);
        cfmakeraw(&ser_settings);
 
+	ser_settings.c_lflag |= (ECHO | ECHONL);
+	ser_settings.c_lflag &= ~ECHOCTL;
        tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
 
 #endif
@@ -276,6 +280,8 @@ static int restart_gser(void)
  	tcgetattr(pc_client_fd, &ser_settings);
 	cfmakeraw(&ser_settings);
 
+	ser_settings.c_lflag |= (ECHO | ECHONL);
+	ser_settings.c_lflag &= ~ECHOCTL;
 	tcsetattr(pc_client_fd, TCSANOW, &ser_settings);
 	
 	return 0;
