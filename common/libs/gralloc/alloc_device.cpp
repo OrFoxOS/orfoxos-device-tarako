@@ -48,11 +48,6 @@
 #include <linux/ion.h>
 #define ION_DEVICE "/dev/ion"
 
-#ifdef USE_UI_OVERLAY
-#define ION_BUF_NUM_FOR_NOT_VIDEO 8
-#else
-#define ION_BUF_NUM_FOR_NOT_VIDEO 0
-#endif
 
 #define GRALLOC_ALIGN( value, base ) (((value) + ((base) - 1)) & ~((base) - 1))
 
@@ -478,15 +473,8 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 	if ((format == HAL_PIXEL_FORMAT_RGBA_8888)
 		&& (((stride == m->info.xres) && (h == m->info.yres)) ||((h == m->info.xres) && (stride == m->info.yres)) )
 		&& !(usage & GRALLOC_USAGE_HW_FB)) {
-		if (m->mIonBufNum < ION_BUF_NUM_FOR_NOT_VIDEO) {
 			usage |= GRALLOC_USAGE_PRIVATE_0;
 			preferIon = 1;
-			m->mIonBufNum++;
-		} else {
-#ifdef USE_UI_OVERLAY
-			ALOGE("================allocat  ion memory for rgba, buffer number too small %d, reserved = %d", m->mIonBufNum, ION_BUF_NUM_FOR_NOT_VIDEO);
-#endif
-		}
 	}
 
 	int err;
@@ -503,10 +491,14 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 				hnd->flags |= private_handle_t::PRIV_FLAGS_NOT_OVERLAY;
 			}
 			if(preferIon)
+			{
+				m->mIonBufNum++;
 				ALOGI("================allocat  ion memory for rgba xres*yres = %d*%d fd = %d:%d", m->info.xres,  m->info.yres, hnd->fd, m->mIonBufNum);	
+			}
 		} else {
 			if(preferIon) {
-				ALOGE("================allocat  ion memory for rgba reserved buffer size too small");
+				ALOGW("================allocat ion memory for rgba reserved buffer size too small,may allocat normal buffer");
+				goto AllocNormalBuffer;
 			}
 		}
 	}
@@ -516,6 +508,7 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 	}
 	else
 	{
+AllocNormalBuffer:
 		err = gralloc_alloc_buffer(dev, size, usage, pHandle);
 		 if(err>=0){
 			const native_handle_t *p_nativeh  = *pHandle;
@@ -523,6 +516,10 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 			hnd->format = format;
 			hnd->width = stride;
 			hnd->height = h;
+		}
+		else
+		{
+			ALOGE("================allocat normal memory failed xres*yres = %d*%d", m->info.xres,  m->info.yres);
 		}
 	}
 
