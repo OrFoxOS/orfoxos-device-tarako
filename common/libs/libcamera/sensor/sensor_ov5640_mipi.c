@@ -1333,6 +1333,8 @@ LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on)
 	//uint32_t reset_width=g_ov5640_yuv_info.reset_pulse_width;
 
 	if (SENSOR_TRUE == power_on) {
+		//reset
+		Sensor_SetResetLevel(reset_level);
 		Sensor_PowerDown(power_down);
 		// Open power
 		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
@@ -1341,8 +1343,10 @@ LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on)
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
 		usleep(10*1000);
 		Sensor_PowerDown(!power_down);
+		usleep(10*1000);
 		// Reset sensor
-		Sensor_Reset(reset_level);
+		Sensor_SetResetLevel(!reset_level);
+		usleep(20*1000);
 	} else {
 		Sensor_PowerDown(power_down);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);

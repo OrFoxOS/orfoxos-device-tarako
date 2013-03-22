@@ -51,9 +51,9 @@ extern SENSOR_INFO_T g_hi351_mipi_yuv_info;
  **---------------------------------------------------------------------------*/
 const SENSOR_INFO_T* main_sensor_infor_tab[]=
 {
+	&g_hi351_mipi_yuv_info,
 	&g_ov5640_mipi_yuv_info,
 	&g_s5k5ccgx_yuv_info_mipi,
-	&g_hi351_mipi_yuv_info,
 	//&g_ov5640_mipi_raw_info,
 	//&g_ov5640_yuv_info,
 	//&g_OV7675_yuv_info,
@@ -65,10 +65,13 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 
 const SENSOR_INFO_T* sub_sensor_infor_tab[]=
 {
+#ifndef CONFIG_FRONT_CAMERA_NONE
 	&g_OV7675_yuv_info,
 	//&g_GC0309_yuv_info,
 	//g_OV7690_yuv_info,
+#else	
 	PNULL
+#endif
 };
 
 
