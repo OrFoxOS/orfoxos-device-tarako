@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef _CMR_COMMON_H_
 #define _CMR_COMMON_H_
 
@@ -90,7 +91,7 @@ enum img_data_type_e {
 
 enum img_skip_mode {
 	IMG_SKIP_HW = 0,
-	IMG_SKIP_SW				
+	IMG_SKIP_SW
 };
 
 enum restart_mode {

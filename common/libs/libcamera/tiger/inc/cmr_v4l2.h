@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef _CMR_V4L2_H_
 #define _CMR_V4L2_H_
 

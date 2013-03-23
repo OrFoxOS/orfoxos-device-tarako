@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef ANDROID_HARDWARE_SPRD_OEM_CAMERA_H
 #define ANDROID_HARDWARE_SPRD_OEM_CAMERA_H
 
