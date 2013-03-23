@@ -31,8 +31,8 @@ extern uint16 *jpeg_fw_quant_tbl_new[2];
 
 PUBLIC void JPEGFW_InitQuantTbl(JPEG_QUALITY_E level);
 PUBLIC JPEG_RET_E JPEGFW_AdjustQuantTbl_Dec();
-PUBLIC void JPEGFW_InitTransFun(JPEG_PROGRESSIVE_INFO_T *progressive_info_ptr);
-PUBLIC void Initialize_Clip();
+//PUBLIC void JPEGFW_InitTransFun(JPEG_PROGRESSIVE_INFO_T *progressive_info_ptr);
+//PUBLIC void Initialize_Clip();
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
