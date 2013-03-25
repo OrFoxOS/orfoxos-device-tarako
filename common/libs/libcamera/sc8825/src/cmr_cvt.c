@@ -163,15 +163,6 @@ int cmr_rot(enum img_rot_angle  angle,
 	struct _rot_cfg_tag      rot_cfg;
 	int                      ret = 0;
 
-	CMR_LOGV("angle %d, src 0x%x 0x%x, w h %d %d, dst 0x%x 0x%x",
-		angle,
-		src_img->addr_phy.addr_y,
-		src_img->addr_phy.addr_u,
-		src_img->size.width,
-		src_img->size.height,
-		dst_img->addr_phy.addr_y,
-		dst_img->addr_phy.addr_u);
-
 	if (-1 == rot_fd) {
 		CMR_LOGE("Invalid fd");
 		return -ENODEV;
@@ -181,6 +172,16 @@ int cmr_rot(enum img_rot_angle  angle,
 		CMR_LOGE("Wrong parameter 0x%x 0x%x", (uint32_t)src_img, (uint32_t)dst_img);
 		return -EINVAL;
 	}
+
+	CMR_LOGV("angle %d, src 0x%x 0x%x, w h %d %d, dst 0x%x 0x%x",
+		angle,
+		src_img->addr_phy.addr_y,
+		src_img->addr_phy.addr_u,
+		src_img->size.width,
+		src_img->size.height,
+		dst_img->addr_phy.addr_y,
+		dst_img->addr_phy.addr_u);
+
 
 	if ((uint32_t)angle < (uint32_t)(IMG_ROT_90)) {
 		CMR_LOGE("Wrong angle %d", angle);
@@ -192,6 +193,7 @@ int cmr_rot(enum img_rot_angle  angle,
 	rot_cfg.format          = cmr_rot_fmt_cvt(src_img->fmt);
 	if (rot_cfg.format >= ROT_FMT_MAX) {
 		CMR_LOGE("Unsupported format %d, %d", src_img->fmt, rot_cfg.format);
+		sem_post(&rot_sem);
 		return -EINVAL;
 	}
 
@@ -210,6 +212,7 @@ int cmr_rot(enum img_rot_angle  angle,
 	ret = ioctl(rot_fd, ROT_IO_CFG, &rot_cfg);
 	if (ret) {
 		CMR_LOGE("Unsupported format %d, %d", src_img->fmt, rot_cfg.format);
+		sem_post(&rot_sem);
 		return -EINVAL;
 	}
 
@@ -394,7 +397,7 @@ static void* cmr_rot_thread_proc(void* data)
 			CMR_LOGV("To exit rot thread");
 			break;
 		} else {
-			CMR_LOGV("rot done OK. 0x%x", rot_evt_cb);
+			CMR_LOGV("rot done OK. 0x%x", (uint32_t)rot_evt_cb);
 			frame.reserved = rot_user_data;
 			evt_id = CMR_IMG_CVT_ROT_DONE;
 			pthread_mutex_lock(&rot_cb_mutex);
@@ -869,7 +872,7 @@ int cmr_scale_capability(uint32_t *width, uint32_t *sc_factor)
 	int                      ret = 0;
 
 	if (NULL == width || NULL == sc_factor) {
-		CMR_LOGE("Wrong param, 0x%x 0x%x", width, sc_factor);
+		CMR_LOGE("Wrong param, 0x%x 0x%x", (uint32_t)width, (uint32_t)sc_factor);
 		return -ENODEV;
 	}
 
@@ -901,7 +904,8 @@ int cmr_scale_deinit(void)
 		pthread_cond_signal(&scaler_cond);
 	}
 	pthread_mutex_unlock(&scaler_cb_mutex);
-
+	sem_wait(&scaler_sem);
+	sem_post(&scaler_sem);
 	ioctl(scaler_fd, SCALE_IO_STOP, NULL);
 	/* thread should be killed before fd deinited */
 	ret = cmr_scale_kill_thread();
