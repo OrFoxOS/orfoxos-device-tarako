@@ -42,6 +42,24 @@ static const char* TO_MULTI_SIM_CMDS[] = {
 	"AT+SFUN=5"
 };
 
+int eng_get_simcount(void)
+{
+	char simtype[8];
+	int sim;
+
+	memset(simtype, 0, sizeof(simtype));
+
+	if ( 0 == property_get("persist.msms.phone_count", simtype, "1") )
+	{
+		ENG_LOG("%s: persist.msms.phone_count = %s", __FUNCTION__, simtype);
+		sim = atoi(simtype);
+	} else {
+		sim =1;
+	}
+
+	return sim;
+}
+
 #if PC_DATA_FROM_AT_ROUTER
 int create_pty(char *path)
 {
@@ -200,7 +218,7 @@ static int eng_pcclient_init(void)
 
 #endif
 	
-	for ( i=0;i<MAX_CS_SIMS;i++ ){
+	for ( i=0;i<eng_get_simcount();i++ ){
 		cs_sim_fds[i] = -1;
 		while((cs_sim_fds[i] = eng_at_open(i)) < 0){
 			ENG_LOG("%s: open server socket failed!, error[%d][%s]\n",\
@@ -388,6 +406,12 @@ static int eng_dispatch_simfd_counts(char* databuf)
 	int count;
 	unsigned int i;
 	int is_multi=0;
+
+	if ( 1 == eng_get_simcount())
+	{
+		count =1;
+		return count;
+	}
 
 	for (i=0;i<NUM_ELEMS(TO_MULTI_SIM_CMDS);i++)
 	{
