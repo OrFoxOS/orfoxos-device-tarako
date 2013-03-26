@@ -26,6 +26,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <math.h>
+#include <semaphore.h>
 
 #include "../sc8810/SprdOEMCamera.h"
 #include "jpeg_exif_header.h"
@@ -215,6 +216,8 @@ static uint8_t s_focus_zone_param[FOCUS_RECT_PARAM_LEN];
 static uint32_t s_af_is_stop = 1;
 static uint32_t s_af_is_cancel = 0;
 static uint32_t g_encoder_is_end = 1;
+
+static sem_t g_capture_encode_thrd_sync_sem;
 
 /* exif  info*/
 LOCAL JINF_EXIF_INFO_T 			g_dc_exif_info;
@@ -929,10 +932,13 @@ void *camera_encoder_thread(void *client_data)
 	uint32_t* jpeg_enc_buf_virt_addr;
 	uint32_t jpeg_enc_buf_len;
 	uint32_t i;
+
 	g_encoder_is_end = 0;
 	ALOGV("camera_encoder_thread S. 0x%x 0x%x 0x%x 0x%x",
 		  g_buffers[g_releasebuff_index].virt_addr,g_buffers[g_releasebuff_index].phys_addr,
 		  s_camera_info.jpg_enc_y_temp_virt_addr,s_camera_info.jpg_enc_y_temp_phy_addr);
+
+	sem_post(&g_capture_encode_thrd_sync_sem);
 
 	g_client_data = client_data;
 	g_jpegenc_params.format = JPEGENC_YUV_420;
@@ -1167,20 +1173,29 @@ camera_ret_code_type camera_encode_picture(
 	src = NULL;
 }
 #endif
+
+
+	sem_init(&g_capture_encode_thrd_sync_sem, 0, 0);
+
 	//create the thread for encoder
 	pthread_attr_init (&attr);
          pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	if(0 !=  pthread_create(&g_encoder_thr, &attr, camera_encoder_thread, client_data))	
 	{
 		ALOGE("Fail to careate thread in encoder mode.");
-		return CAMERA_FAILED;
-	}
-	else
-	{
-		ALOGV("OK to create thread in encoder mode.");
+		goto out;
 	}
 
+	sem_wait(&g_capture_encode_thrd_sync_sem);
+	sem_destroy(&g_capture_encode_thrd_sync_sem);
+
+	ALOGV("OK to create thread in encoder mode.");
+
 	return ret_type;
+out:
+	sem_destroy(&g_capture_encode_thrd_sync_sem);
+
+	return CAMERA_FAILED;
 }
 
 static int open_device(void)
