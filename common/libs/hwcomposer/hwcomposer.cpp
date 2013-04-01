@@ -277,9 +277,9 @@ static int verify_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
     	context->fb_rect.h = MIN(l->displayFrame.bottom - context->fb_rect.y, context->fb_height - context->fb_rect.y);
 
 	context->fb_rect.w = (context->fb_rect.w + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
-	context->fb_rect.w = MIN(context->fb_rect.w, context->fb_width - ((context->fb_rect.x + FB_X_ALLIGNED) & (~FB_X_ALLIGNED)));
+	context->fb_rect.w = MIN(context->fb_rect.w, context->fb_width - ((context->fb_rect.x + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED)));
 	context->fb_rect.h = (context->fb_rect.h + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
-	context->fb_rect.h = MIN(context->fb_rect.h, context->fb_height - ((context->fb_rect.y + FB_Y_ALLIGNED) & (~FB_Y_ALLIGNED)));
+	context->fb_rect.h = MIN(context->fb_rect.h, context->fb_height - ((context->fb_rect.y + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED)));
 
 	ALOGV("rects {%d,%d,%d,%d}, {%d,%d,%d,%d}", context->src_rect.x,context->src_rect.y,context->src_rect.w,context->src_rect.h,
 		context->fb_rect.x, context->fb_rect.y, context->fb_rect.w, context->fb_rect.h);
@@ -374,11 +374,11 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 	if (private_h->flags & private_handle_t::PRIV_FLAGS_USES_PHY) {
 		if (0 == l->transform) {
 #ifdef _SUPPORT_SYNC_DISP
-			ALOGV("osd display directly");
+			ALOGI_IF(debugenable , "osd display directly");
 			context->osd_sync_display = 1;
 			current_overlay_addr  = private_h->phyaddr;
 #else
-			ALOGV("osd display with rot copy");
+			ALOGI_IF(debugenable , "osd display with rot copy");
 			context->osd_sync_display = 0;
 			current_overlay_addr = context->overlay_phy_addr2 + context->overlay_buf_size2*context->overlay_index2;
 			int ret = camera_rotation_copy_data(context->fb_width, context->fb_height,  private_h->phyaddr, current_overlay_addr);
@@ -387,7 +387,7 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 			context->overlay_index2 = (context->overlay_index2 + 1)%OVERLAY_BUF_NUM;
 #endif
 		} else {
-			ALOGV("osd display with rot");
+			ALOGI_IF(debugenable , "osd display with rot");
 			current_overlay_addr = context->overlay_phy_addr2 + context->overlay_buf_size2*context->overlay_index2;
 			int degree;
 			if (HAL_TRANSFORM_ROT_90 == l->transform)
@@ -402,7 +402,7 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 			context->overlay_index2 = (context->overlay_index2 + 1)%OVERLAY_BUF_NUM;
 		}
 	} else {
-		ALOGV("osd display with dma copy");
+		ALOGI_IF(debugenable , "osd display with dma copy");
 		current_overlay_addr = context->overlay_phy_addr2 + context->overlay_buf_size2*context->overlay_index2;
 		camera_rotation_copy_data_from_virtual(context->fb_width, context->fb_height, private_h->base, current_overlay_addr);
 		context->overlay_index2 = (context->overlay_index2 + 1)%OVERLAY_BUF_NUM;
@@ -421,7 +421,7 @@ static int set_osd_layer(struct hwc_context_t *context, hwc_layer_t * l)
 	ov_setting.rect.w = context->fb_width;
 	ov_setting.rect.h = context->fb_height;
 	ov_setting.buffer = (unsigned char*)current_overlay_addr;
-	ALOGV("osd overlay parameter datatype = %d,x=%d,y=%d,w=%d,h=%d,buffer = %x",ov_setting.data_type,ov_setting.rect.x,ov_setting.rect.y,ov_setting.rect.w,ov_setting.rect.h,ov_setting.buffer);
+	ALOGI_IF(debugenable , "osd overlay parameter datatype = %d,x=%d,y=%d,w=%d,h=%d,buffer = %x",ov_setting.data_type,ov_setting.rect.x,ov_setting.rect.y,ov_setting.rect.w,ov_setting.rect.h,ov_setting.buffer);
 	if (ioctl(context->fbfd, SPRD_FB_SET_OVERLAY, &ov_setting) == -1)
 	{
 		ALOGE("fail osd SPRD_FB_SET_OVERLAY");
@@ -465,7 +465,7 @@ static int set_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 		ov_setting.rect.w = context->fb_rect.w;
 		ov_setting.rect.h = context->fb_rect.h;
 		ov_setting.buffer = (unsigned char*)current_overlay_addr;
-		ALOGV("video overlay parameter datatype = %d,x=%d,y=%d,w=%d,h=%d,buffer = %x",ov_setting.data_type,ov_setting.rect.x,ov_setting.rect.y,ov_setting.rect.w,ov_setting.rect.h,ov_setting.buffer);
+		ALOGI_IF(debugenable , "video overlay parameter datatype = %d,x=%d,y=%d,w=%d,h=%d,buffer = %x",ov_setting.data_type,ov_setting.rect.x,ov_setting.rect.y,ov_setting.rect.w,ov_setting.rect.h,ov_setting.buffer);
 
 		if (ioctl(context->fbfd, SPRD_FB_SET_OVERLAY, &ov_setting) == -1)
 		{
@@ -483,7 +483,7 @@ static int is_overlay_supportted(struct hwc_context_t *context, hwc_layer_t * l)
 	const native_handle_t *pNativeHandle = l->handle;
 	struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
 
-	ALOGV("private_h %x,%d,%d,%x",private_h->format,private_h->width,private_h->height,private_h->phyaddr);
+	ALOGI_IF(debugenable , "private_h %x,%d,%d,%x",private_h->format,private_h->width,private_h->height,private_h->phyaddr);
 
        if(private_h->format == HAL_PIXEL_FORMAT_RGBA_8888) {
 		return verify_osd_layer(context,  l);
@@ -689,7 +689,7 @@ static int hwc_set(hwc_composer_device_t *dev,
 	}
 #ifdef _PROC_OSD_WITH_THREAD
 	if (osd_layer) {
-		ALOGV("send command to osd proc thread");
+		ALOGI_IF(debugenable , "send command to osd proc thread");
 		ctx->osd_proc_cmd = osd_layer;
 		sem_post(&ctx->cmd_sem);
 	}
@@ -724,13 +724,13 @@ static int hwc_set(hwc_composer_device_t *dev,
 		display_setting.rect.y = 0;
 		display_setting.rect.w = ctx->fb_width;
 		display_setting.rect.h = ctx->fb_height;
-		ALOGV("SPRD_FB_DISPLAY_OVERLAY %d", layer_indexs);
+		ALOGI_IF(debugenable,"SPRD_FB_DISPLAY_OVERLAY %d", layer_indexs);
 		ioctl(ctx->fbfd, SPRD_FB_DISPLAY_OVERLAY, &display_setting);
 	} else {
 		if ((ctx->video_overlay_flag||ctx->osd_overlay_flag)) {
-			ALOGV("eglSwapBuffers video=%d, osd=%d", ctx->video_overlay_flag, ctx->osd_overlay_flag );
+			ALOGI_IF(debugenable , "eglSwapBuffers video=%d, osd=%d", ctx->video_overlay_flag, ctx->osd_overlay_flag );
 		}
-		ALOGV("eglSwapBuffers");
+		ALOGI_IF(debugenable , "eglSwapBuffers");
 		EGLBoolean sucess = eglSwapBuffers((EGLDisplay)dpy, (EGLSurface)sur);
 		if (!sucess) {
 			return HWC_EGL_ERROR;
