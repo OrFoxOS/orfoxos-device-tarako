@@ -20,6 +20,7 @@
 #include "sprd_scale.h"
 #include "sprd_rotation.h"
 #include "scale_rotate.h"
+#include "graphics.h"
 
 
 static ROTATION_DATA_FORMAT_E rotation_data_format_convertion(HW_ROTATION_DATA_FORMAT_E data_format)
@@ -199,7 +200,7 @@ int camera_rotation(HW_ROTATION_DATA_FORMAT_E rot_format, int degree, uint32_t w
 	return ret;
 }
 
-int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
+int do_scaling_and_rotaion(HW_SCALE_DATA_FORMAT_E output_fmt,
 	uint32_t output_width, uint32_t output_height,
 	uint32_t output_yaddr,uint32_t output_uvaddr,
 	HW_SCALE_DATA_FORMAT_E input_fmt,uint32_t input_uv_endian,
@@ -217,7 +218,12 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	uint32_t slice_height = 0;
 	ISP_ENDIAN_T in_endian;
 	ISP_ENDIAN_T out_endian;
-
+	int fd = open("/dev/sprd_scale", O_RDONLY);
+	if(fd < 0)
+	{
+		ALOGE("error to open dev sprd_scale");
+		return -1;
+	}
 	//set mode
 	scale_config.id = SCALE_PATH_MODE;
 	scale_mode = SCALE_MODE_SCALE;
@@ -225,6 +231,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
                 return -1;
 	}
 
@@ -235,6 +242,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set output data format
@@ -244,6 +252,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set input size
@@ -254,6 +263,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set output size
@@ -264,6 +274,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set input size
@@ -276,6 +287,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set input address
@@ -291,6 +303,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set output address
@@ -303,6 +316,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set input endian
@@ -313,6 +327,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 	//set output endian
@@ -323,6 +338,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;;
 	}
 
@@ -333,6 +349,7 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		ALOGE("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
+		close(fd);
 		return -1;
 	}
 
@@ -340,9 +357,100 @@ int do_scaling_and_rotaion(int fd, HW_SCALE_DATA_FORMAT_E output_fmt,
 	if (-1 == ioctl(fd, SCALE_IOC_DONE, 0))
 	{
 		ALOGE("Fail to SCALE_IOC_DONE");
+		close(fd);
 		return -1;
 	}
-
+	close(fd);
 	return 0;
 }
 
+#ifndef USE_GPU_PROCESS_VIDEO
+int transform_layer(uint32_t srcPhy, uint32_t srcVirt, uint32_t srcFormat, uint32_t transform,
+									uint32_t srcWidth, uint32_t srcHeight , uint32_t dstPhy ,
+									uint32_t dstVirt, uint32_t dstFormat , uint32_t dstWidth, 
+									uint32_t dstHeight , struct sprd_rect *trim_rect , uint32_t tmp_phy_addr,
+									uint32_t tmp_vir_addr)
+{
+	int ret = 0;
+	HW_SCALE_DATA_FORMAT_E input_format;
+	int input_endian = 0;
+	int dst_scale_rot_format = 0;
+	switch(srcFormat) {
+	case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+		input_format = HW_SCALE_DATA_YUV420;
+		input_endian = 1;
+		break;
+	case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+		input_format = HW_SCALE_DATA_YUV420;
+		break;
+	case HAL_PIXEL_FORMAT_YV12:
+		input_format = HW_SCALE_DATA_YUV420_3FRAME;
+	default:
+		return -1;
+	}
+	switch(dstFormat)
+	{
+	case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+		dst_scale_rot_format = HW_SCALE_DATA_YUV420;
+		break;
+	default:
+		return -1;
+	}
+	int dcam_rot_degree = 0;
+	HW_ROTATION_MODE_E rot;
+	uint32_t outRealWidth = dstWidth;
+	uint32_t outRealHeight = dstHeight;
+	switch(transform) {
+	case 0:
+		rot = HW_ROTATION_0;
+		break;
+	case HAL_TRANSFORM_ROT_90:
+		rot = HW_ROTATION_90;
+		outRealWidth = dstHeight;
+		outRealHeight = dstWidth;
+		dcam_rot_degree = 90;
+		break;
+	case HAL_TRANSFORM_ROT_180:
+		rot = HW_ROTATION_180;
+		dcam_rot_degree = 180;
+		break;
+	case HAL_TRANSFORM_ROT_270:
+		rot = HW_ROTATION_270;
+		outRealWidth = dstHeight;
+		outRealHeight = dstWidth;
+		dcam_rot_degree = 270;
+		break;
+	case HAL_TRANSFORM_FLIP_H:
+		rot = HW_ROTATION_MIRROR;
+		dcam_rot_degree = -1;//ROTATION_MIRROR
+		break;
+	default://HAL_TRANSFORM_ROT_90+HAL_TRANSFORM_FLIP_H or HAL_TRANSFORM_ROT_90+HAL_TRANSFORM_FLIP_V  or HAL_TRANSFORM_FLIP_V
+		rot = HW_ROTATION_90;
+		outRealWidth = dstHeight;
+		outRealHeight = dstWidth;
+		break;
+	}
+
+	if ((srcFormat != HAL_PIXEL_FORMAT_YV12) && dcam_rot_degree
+		&& (srcWidth == trim_rect->w) && (srcHeight == trim_rect->h)
+		&& (srcWidth == outRealWidth) && (srcHeight == outRealHeight)) {
+		ALOGV("do rotation by rot hw");
+		ret = camera_rotation(HW_ROTATION_DATA_YUV420, dcam_rot_degree, srcWidth, srcHeight, srcPhy, dstPhy);
+		if(-1 == ret)
+			ALOGE("do rotaion fail");
+	} else {
+		ret = do_scaling_and_rotaion(dst_scale_rot_format,
+		outRealWidth,outRealHeight,
+		dstPhy,dstPhy + dstHeight*dstWidth,
+		input_format,input_endian,
+		srcWidth,srcHeight,
+		srcPhy,srcPhy + srcWidth*srcHeight,
+		trim_rect,rot, tmp_phy_addr);
+		if(ret != 0)
+			ALOGE("do_scaling_and_rotaion failed");
+	}
+	
+	return ret;
+
+}
+#endif

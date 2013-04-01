@@ -42,6 +42,9 @@
 #define SPRD_ION_DEV "/dev/ion"
 
 #define OVERLAY_BUF_NUM 2
+extern void dump_layers(hwc_layer_list_t *list);
+extern int g_randNum;
+extern bool g_ResetDumpIndexFlag;
 inline unsigned int round_up_to_page_size(unsigned int x)
 {
     return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
@@ -117,93 +120,33 @@ inline int MAX(int x, int y) {
 
 static int transform_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 {
-	uint32_t current_overlay_addr;
+	uint32_t current_overlay_phy_addr;
+	uint32_t current_overlay_vir_addr;
 	int ret = 0;
+#ifdef VIDEO_LAYER_USE_RGB
+	int dstFormat = HAL_PIXEL_FORMAT_RGBX_8888;
+#else
+	int dstFormat = HAL_PIXEL_FORMAT_YCbCr_420_SP;
+#endif
 	const native_handle_t *pNativeHandle = l->handle;
 	struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
 
 	context->src_img.y_addr = private_h->phyaddr;
 
-	int input_endian = 0;
-	HW_SCALE_DATA_FORMAT_E input_format;
-	switch(context->src_img.format ) {
-	case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-		input_format = HW_SCALE_DATA_YUV420;
-		input_endian = 1;
-		break;
-	case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-		input_format = HW_SCALE_DATA_YUV420;
-		break;
-	case HAL_PIXEL_FORMAT_YV12:
-		input_format = HW_SCALE_DATA_YUV420_3FRAME;
-	default:
-		return -1;
-	}
-	int dcam_rot_degree = 0;
-	HW_ROTATION_MODE_E rot;
-	uint32_t output_width = context->fb_rect.w;
-	uint32_t output_height = context->fb_rect.h;
-	switch(l->transform) {
-	case 0:
-		rot = HW_ROTATION_0;
-		break;
-	case HAL_TRANSFORM_ROT_90:
-		rot = HW_ROTATION_90;
-		output_width = context->fb_rect.h;
-		output_height = context->fb_rect.w;
-		dcam_rot_degree = 90;
-		break;
-	case HAL_TRANSFORM_ROT_180:
-		rot = HW_ROTATION_180;
-		dcam_rot_degree = 180;
-		break;
-	case HAL_TRANSFORM_ROT_270:
-		rot = HW_ROTATION_270;
-		output_width = context->fb_rect.h;
-		output_height = context->fb_rect.w;
-		dcam_rot_degree = 270;
-		break;
-	case HAL_TRANSFORM_FLIP_H:
-		rot = HW_ROTATION_MIRROR;
-		dcam_rot_degree = -1;//ROTATION_MIRROR
-		break;
-	default://HAL_TRANSFORM_ROT_90+HAL_TRANSFORM_FLIP_H or HAL_TRANSFORM_ROT_90+HAL_TRANSFORM_FLIP_V  or HAL_TRANSFORM_FLIP_V
-		rot = HW_ROTATION_90;
-		output_width = context->fb_rect.h;
-		output_height = context->fb_rect.w;
-		break;
-	}
 
-	current_overlay_addr = context->overlay_phy_addr + context->overlay_buf_size*context->overlay_index;
-
-	if ((context->src_img.format != HAL_PIXEL_FORMAT_YV12) && dcam_rot_degree
-		&& (context->src_img.w == context->src_rect.w) && (context->src_img.h == context->src_rect.h)
-		&& (context->src_img.w == output_width) && (context->src_img.h == output_height)) {
-		ALOGV("do rotation by rot hw");
-		ret = camera_rotation(HW_ROTATION_DATA_YUV420, dcam_rot_degree, context->src_img.w, context->src_img.h, context->src_img.y_addr, current_overlay_addr);
-		if(-1 == ret)
-			ALOGE("do rotaion fail");
-	} else {
+	current_overlay_phy_addr = context->overlay_phy_addr + context->overlay_buf_size*context->overlay_index;
+	current_overlay_vir_addr = ((unsigned int)context->overlay_v_addr) + context->overlay_buf_size*context->overlay_index;
 #ifdef SCAL_ROT_TMP_BUF
-		 uint32_t tmp_addr = context->overlay_phy_addr_tmp;
+	uint32_t tmp_phy_addr = context->overlay_phy_addr_tmp;
+	uint32_t tmp_virt_addr = (uint32_t)context->overlay_v_addr_tmp;
 #else
-		uint32_t tmp_addr = 0;
+	uint32_t tmp_phy_addr = 0;
+	uint32_t tmp_virt_addr = 0;
 #endif
-		 int fd = open("/dev/sprd_scale", O_RDONLY);
-		 if (fd >= 0) {
-		 ret = do_scaling_and_rotaion(fd, HW_SCALE_DATA_YUV420,
-			output_width,output_height,
-			current_overlay_addr,current_overlay_addr + context->fb_rect.w*context->fb_rect.h,
-			input_format,input_endian,
-			context->src_img.w,context->src_img.h,
-			context->src_img.y_addr,context->src_img.y_addr + context->src_img.w*context->src_img.h,
-			&context->src_rect,rot, tmp_addr);
-		 close(fd);
-		 } else {
-		 	ret = -1;
-			ALOGE("fail to open scale driver");
-		 }
-	}
+	ret = transform_layer(context->src_img.y_addr , private_h->base, context->src_img.format , l->transform,
+					context->src_img.w, context->src_img.h, current_overlay_phy_addr , current_overlay_vir_addr ,
+					dstFormat , context->fb_rect.w , context->fb_rect.h , &context->src_rect , 
+					tmp_phy_addr , tmp_virt_addr);
 	return ret;
 }
 
@@ -306,26 +249,26 @@ static int verify_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 	int rot_90_270 = (l->transform&HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90;
 
     	context->src_rect.x = MAX(l->sourceCrop.left, 0);
-	context->src_rect.x = (context->src_rect.x + 7) & (~7);//dcam 8 pixel crop
+	context->src_rect.x = (context->src_rect.x + SRCRECT_X_ALLIGNED) & (~SRCRECT_X_ALLIGNED);//dcam 8 pixel crop
     	context->src_rect.x = MIN(context->src_rect.x, context->src_img.w);
     	context->src_rect.y = MAX(l->sourceCrop.top, 0);
-	context->src_rect.y = (context->src_rect.y + 7) & (~7);//dcam 8 pixel crop
+	context->src_rect.y = (context->src_rect.y + SRCRECT_Y_ALLIGNED) & (~SRCRECT_Y_ALLIGNED);//dcam 8 pixel crop
     	context->src_rect.y = MIN(context->src_rect.y, context->src_img.h);
 
     	context->src_rect.w = MIN(l->sourceCrop.right - context->src_rect.x, context->src_img.w - context->src_rect.x);
     	context->src_rect.h = MIN(l->sourceCrop.bottom - context->src_rect.y, context->src_img.h - context->src_rect.y);
-	context->src_rect.w = (context->src_rect.w + 7) & (~7);//dcam 8 pixel crop
+	context->src_rect.w = (context->src_rect.w + SRCRECT_WIDTH_ALLIGNED) & (~SRCRECT_WIDTH_ALLIGNED);//dcam 8 pixel crop
 	context->src_rect.w = MIN(context->src_rect.w, context->src_img.w - context->src_rect.x);
-	context->src_rect.h = (context->src_rect.h + 7) & (~7);//dcam 8 pixel crop
+	context->src_rect.h = (context->src_rect.h + SRCRECT_HEIGHT_ALLIGNED) & (~SRCRECT_HEIGHT_ALLIGNED);//dcam 8 pixel crop
 	context->src_rect.h = MIN(context->src_rect.h, context->src_img.h - context->src_rect.y);
 	//--------------------------------------------------
     	context->fb_rect.x = MAX(l->displayFrame.left, 0);
     	context->fb_rect.y = MAX(l->displayFrame.top, 0);
 
 	if(!rot_90_270) {
-		context->fb_rect.x = (context->fb_rect.x + 3) & (~3);//lcdc must 4 pixel for yuv420
+		context->fb_rect.x = (context->fb_rect.x + FB_X_ALLIGNED) & (~FB_X_ALLIGNED);//lcdc must 4 pixel for yuv420
 	} else {
-		context->fb_rect.y = (context->fb_rect.y + 3) & (~3);//lcdc must 4 pixel for yuv420
+		context->fb_rect.y = (context->fb_rect.y + FB_Y_ALLIGNED) & (~FB_Y_ALLIGNED);//lcdc must 4 pixel for yuv420
 	}
 	context->fb_rect.x = MIN(context->fb_rect.x, context->fb_width);
 	context->fb_rect.y = MIN(context->fb_rect.y, context->fb_height);
@@ -333,10 +276,10 @@ static int verify_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
     	context->fb_rect.w = MIN(l->displayFrame.right - context->fb_rect.x, context->fb_width - context->fb_rect.x);
     	context->fb_rect.h = MIN(l->displayFrame.bottom - context->fb_rect.y, context->fb_height - context->fb_rect.y);
 
-	context->fb_rect.w = (context->fb_rect.w + 7) & (~7);//dcam 8 pixel and lcdc must 4 pixel for yuv420
-	context->fb_rect.w = MIN(context->fb_rect.w, context->fb_width - ((context->fb_rect.x + 7) & (~7)));
-	context->fb_rect.h = (context->fb_rect.h + 7) & (~7);//dcam 8 pixel and lcdc must 4 pixel for yuv420
-	context->fb_rect.h = MIN(context->fb_rect.h, context->fb_height - ((context->fb_rect.y + 7) & (~7)));
+	context->fb_rect.w = (context->fb_rect.w + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+	context->fb_rect.w = MIN(context->fb_rect.w, context->fb_width - ((context->fb_rect.x + FB_X_ALLIGNED) & (~FB_X_ALLIGNED)));
+	context->fb_rect.h = (context->fb_rect.h + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+	context->fb_rect.h = MIN(context->fb_rect.h, context->fb_height - ((context->fb_rect.y + FB_Y_ALLIGNED) & (~FB_Y_ALLIGNED)));
 
 	ALOGV("rects {%d,%d,%d,%d}, {%d,%d,%d,%d}", context->src_rect.x,context->src_rect.y,context->src_rect.w,context->src_rect.h,
 		context->fb_rect.x, context->fb_rect.y, context->fb_rect.w, context->fb_rect.h);
@@ -506,10 +449,17 @@ static int set_video_layer(struct hwc_context_t *context, hwc_layer_t * l)
 		//set video layer
 		struct overlay_setting ov_setting;
 		ov_setting.layer_index = SPRD_LAYERS_IMG;
+#ifdef VIDEO_LAYER_USE_RGB
+		ov_setting.data_type = SPRD_DATA_FORMAT_RGB888;
+		ov_setting.y_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
+		ov_setting.uv_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
+		ov_setting.rb_switch = 1;
+#else
 		ov_setting.data_type = SPRD_DATA_FORMAT_YUV420;
 		ov_setting.y_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
 		ov_setting.uv_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
 		ov_setting.rb_switch = 0;
+#endif
 		ov_setting.rect.x = context->fb_rect.x;
 		ov_setting.rect.y = context->fb_rect.y;
 		ov_setting.rect.w = context->fb_rect.w;
@@ -586,7 +536,13 @@ static int hwc_prepare(hwc_composer_device_t *dev, hwc_layer_list_t* list) {
 
 	if(!list)
 		return 0;
-
+	//reset dump index and recalculate random number when geometry changed
+	if(list->flags & HWC_GEOMETRY_CHANGED)
+	{
+		g_ResetDumpIndexFlag = true;
+		srand(g_randNum);
+		g_randNum = rand();
+	}
 	ALOGI_IF(debugenable,"hwc_prepare %d b", list->numHwLayers);
 	ctx->fb_layer_count = 0;
 	ctx->osd_overlay_flag = 0;
@@ -702,6 +658,12 @@ static int hwc_set(hwc_composer_device_t *dev,
     for (size_t i=0 ; i<list->numHwLayers ; i++) {
         //dump_layer(&list->hwLayers[i]);
     }
+
+    //add for dump layer to file, need set property dump.hwcomposer.path & dump.hwcomposer.flag
+    dump_layers(list);
+    g_ResetDumpIndexFlag = false;
+    //add for dump layer end
+
     //ALOGI("hwc_set %d e", list->numHwLayers);
 
 	//ALOGI("set overlay layer begin-----------------");
@@ -860,7 +822,11 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
         status = init_fb_parameter(dev);
 
 	if (0 == status) {
+#ifdef VIDEO_LAYER_USE_RGB
+		dev->overlay_buf_size = round_up_to_page_size(dev->fb_width*dev->fb_height*4);
+#else
 		dev->overlay_buf_size = round_up_to_page_size(dev->fb_width*dev->fb_height*3/2);
+#endif
 		dev->ion_heap = new MemoryHeapIon(SPRD_ION_DEV, dev->overlay_buf_size*OVERLAY_BUF_NUM, MemoryHeapBase::NO_CACHING, (1 << (ION_HEAP_TYPE_CARVEOUT + 1)));
      		int fd = dev->ion_heap->getHeapID();
 		if (fd >= 0) {
