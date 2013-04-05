@@ -57,7 +57,11 @@ endif
 ifeq ($(strip $(USE_UI_OVERLAY)),true)
         LOCAL_CFLAGS += -DUSE_UI_OVERLAY
 endif
-
+ifeq ($(strip $(USE_RGB_VIDEO_LAYER)) , true)
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
+        LOCAL_CFLAGS += -DDRM_SPECIAL_PROCESS
+endif
+endif
 LOCAL_SRC_FILES := \
 	gralloc_module.cpp \
 	alloc_device.cpp \
