@@ -522,11 +522,21 @@ static void do_select_devices(struct tiny_audio_device *adev)
 	        continue;
 	    }
 #endif
-	    set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
+        ALOGI("Changing devices, mask: 0x%08x", adev->dev_cfgs[i].mask);
+        if((cur_devices&AUDIO_DEVICE_OUT_FM_HEADSET) || (cur_devices&AUDIO_DEVICE_OUT_FM_SPEAKER))
+        {
+               if(adev->dev_cfgs[i].mask & AUDIO_DEVICE_IN_WIRED_HEADSET)
+               {
+                       ALOGI("do_select_devices fm record don't open main/hp mic (0x%08x)", cur_devices);
+                       continue;
+               }
+	}
+	set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
 			       adev->dev_cfgs[i].on_len);
     }
 
     /* update EQ profile*/
+
     if(adev->eq_available)
         vb_effect_profile_apply();
 #ifndef _VOICE_CALL_VIA_LINEIN
