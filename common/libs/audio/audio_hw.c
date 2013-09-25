@@ -694,6 +694,7 @@ static int start_output_stream(struct tiny_stream_out *out)
         if (!pcm_is_ready(out->pcm)) {
             ALOGE("cannot open pcm_out driver: %s", pcm_get_error(out->pcm));
             pcm_close(out->pcm);
+            out->pcm = NULL;
             adev->active_output = NULL;
             return -ENOMEM;
         }
@@ -1210,6 +1211,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         if (!pcm_is_ready(in->pcm)) {
             ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
             pcm_close(in->pcm);
+            in->pcm = NULL;
             adev->active_input = NULL;
             return -ENOMEM;
         }
@@ -1218,6 +1220,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         if (!pcm_is_ready(in->pcm)) {
             ALOGE("normal rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
             pcm_close(in->pcm);
+            in->pcm = NULL;
             adev->active_input = NULL;
             return -ENOMEM;
         }
