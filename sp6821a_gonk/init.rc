@@ -115,6 +115,12 @@ loglevel 3
 
 on fs
 # ---------------------------- spreadtrum on fs section start
+# mount mtd partitions
+    # Mount /system rw first to give the filesystem a chance to save a checkpoint
+    mount yaffs2 mtd@system /system
+    mount yaffs2 mtd@system /system ro remount
+    mount yaffs2 mtd@userdata /data nosuid nodev
+    mount yaffs2 mtd@cache /cache nosuid nodev
     mkdir /productinfo 0774 system system
 # ---------------------------- spreadtrum on fs section end
 

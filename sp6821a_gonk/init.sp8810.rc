@@ -11,7 +11,7 @@ on early-init
     symlink /storage/sdcard1 /mnt/sdcard
 
 on fs
-    mount_all /fstab.sp8810
+#   mount_all /fstab.sp8810
     setprop ro.crypto.fuse_sdcard true
 
 on post-fs
