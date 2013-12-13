@@ -31,7 +31,7 @@
 #include "../../../gralloc/gralloc_priv.h"
 
 #include <camera/Camera.h>
-#include <media/hardware/MetadataBufferType.h>
+#include <media/stagefright/MetadataBufferType.h>
 
 #include "SprdOEMCamera.h"
 #include "SprdCameraHardwareConfig.h"

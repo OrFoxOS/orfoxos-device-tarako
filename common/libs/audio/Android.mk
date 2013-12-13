@@ -17,6 +17,8 @@ ifeq ($(strip $(BOARD_USES_TINYALSA_AUDIO)),true)
 
 LOCAL_PATH := $(call my-dir)
 
+ifneq ($(strip $(SP6821A_FFOS_DEBUG)),true)
+
 #TinyAlsa audio
 
 include $(CLEAR_VARS)
@@ -55,6 +57,8 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
+
+endif
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
 endif

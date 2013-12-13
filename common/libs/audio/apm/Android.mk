@@ -3,6 +3,7 @@
 # Copyright 2012 Spreadtrum
 #
 
+ifneq ($(strip $(SP6821A_FFOS_DEBUG)),true)
 # This is the audio policy manager
 
   LOCAL_PATH := $(call my-dir)
@@ -55,3 +56,5 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
+
+endif
