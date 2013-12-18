@@ -69,6 +69,14 @@ on boot
 on property:ro.debuggable=1
     mount debugfs debugfs /sys/kernel/debug
 
+on property:zram.support=true
+    setprop zram.disksize 64
+    setprop sys.vm.swappiness 100
+    start zram
+
+service zram /system/xbin/zram.sh
+        disabled
+        oneshot
 
 #service mfserial /system/bin/mfserial ts0710mux9 ttyS1 1
 #    class main

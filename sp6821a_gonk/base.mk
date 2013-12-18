@@ -82,6 +82,7 @@ PRODUCT_PACKAGES += \
 	tinymix \
 	sensors.$(TARGET_BOARD)  \
 	$(MALI)\
+	zram.sh\
 	modem_control
 
 PRODUCT_PACKAGES += \
