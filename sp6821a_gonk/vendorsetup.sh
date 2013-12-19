@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-add_lunch_combo sp6821a-userdebug
+add_lunch_combo sp6821a_gonk-userdebug
