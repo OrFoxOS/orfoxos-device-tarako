@@ -178,6 +178,12 @@ service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -
     user root
     group radio cache inet misc audio sdcard_rw log
 
+service rilproxy1 /system/bin/rilproxy -c 1
+    class main
+    socket rilproxy1 stream 660 root system
+    user root
+    group radio
+
 on property:persist.msms.phone_count=2
     start ril-daemon1
 
