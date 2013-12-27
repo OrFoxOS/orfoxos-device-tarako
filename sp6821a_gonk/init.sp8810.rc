@@ -1,14 +1,9 @@
 import init.sp8810.usb.rc
 
 on early-init
-    export EXTERNAL_STORAGE /storage/sdcard0
-    export SECONDARY_STORAGE /storage/sdcard1
-    mkdir /storage 0050 system sdcard_r
-    mkdir /storage/sdcard0 0000 system system
-    mkdir /storage/sdcard1 0000 system system
-    # for backwards compatibility
-    symlink /storage/sdcard0 /sdcard
-    symlink /storage/sdcard1 /mnt/sdcard
+    export EXTERNAL_STORAGE /mnt/sdcard
+    mkdir /mnt/sdcard 0000 system system
+    symlink /mnt/sdcard /sdcard
 
 on fs
 #   mount_all /fstab.sp8810
@@ -48,7 +43,7 @@ on boot
     chown system root /proc/nk/guest-02/dsp_bank
     chown system root /proc/nk/guest-02/guestOS_2_bank
 
-    chown system system /sys/class/power_supply/*
+    chown system system /sys/class/power_supply
 
     chmod 666 /dev/ttyS0
     chmod 660 /proc/bluetooth/sleep/proto
@@ -186,11 +181,12 @@ service ril-daemon1 /system/bin/rild_sp  -l /system/lib/libreference-ril_sp.so -
 on property:persist.msms.phone_count=2
     start ril-daemon1
 
-# create virtual SD card at /storage/sdcard0, based on the /data/media directory
+# create virtual SD card at /mnt/sdcard(hard code), based on the /data/media directory
 # daemon will drop to user/group system/media_rw after initializing
 # underlying files in /data/media will be created with user and group media_rw (1023)
-service sdcard /system/bin/sdcard /data/media 1023 1023
-    class late_start
+# conflict with externel SD card
+#service sdcard /system/bin/sdcard /data/media 1023 1023
+#    class late_start
 
 
 service hfag /system/bin/sdptool add --channel=10 HFAG
