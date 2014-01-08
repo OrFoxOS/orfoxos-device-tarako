@@ -17,8 +17,6 @@ ifeq ($(strip $(BOARD_USES_TINYALSA_AUDIO)),true)
 
 LOCAL_PATH := $(call my-dir)
 
-ifneq ($(strip $(SP6821A_FFOS_DEBUG)),true)
-
 #TinyAlsa audio
 
 include $(CLEAR_VARS)
@@ -45,9 +43,15 @@ LOCAL_C_INCLUDES += \
 	device/sprd/common/libs/audio/vb_pga \
 	device/sprd/common/libs/audio/record_process
 
+
 LOCAL_SRC_FILES := audio_hw.c tinyalsa_util.c audio_pga.c \
 			record_process/aud_proc_config.c \
 			record_process/aud_filter_calc.c
+
+ifeq ($(strip $(AUDIO_MUX_PIPE)), true)
+LOCAL_SRC_FILES  += audio_mux_pcm.c
+LOCAL_CFLAGS += -DAUDIO_MUX_PCM
+endif
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog libcutils libtinyalsa libaudioutils \
@@ -57,8 +61,6 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
-
-endif
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
 endif
