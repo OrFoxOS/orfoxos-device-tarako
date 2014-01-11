@@ -1,3 +1,4 @@
+ifeq ($(strip $(SPRDROID4.0_DEV)),true)
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
@@ -27,4 +28,4 @@ LOCAL_MODULE := modem_control
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_EXECUTABLE)
-
+endif
