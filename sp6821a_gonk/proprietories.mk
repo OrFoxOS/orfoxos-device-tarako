@@ -27,12 +27,12 @@ PROPMODS := \
 	system/lib/libomx_avcdec_sw_sprd.so \
 	system/lib/libstagefright_sprd_soft_mpeg4dec.so \
 	system/lib/libstagefright_sprd_soft_h264dec.so \
-	system/bin/rild_sp \
 	system/lib/libril_sp.so \
 	system/lib/libreference-ril_sp.so \
+	system/bin/rild_sp \
 	system/bin/sprd_monitor \
 	system/bin/phoneserver \
-	system/binphoneserver_2sim
+	system/bin/phoneserver_2sim
 
 PRODUCT_COPY_FILES := $(foreach f,$(PROPMODS),vendor/sprd/proprietories/sp6821a/$(f):$(f))
 
