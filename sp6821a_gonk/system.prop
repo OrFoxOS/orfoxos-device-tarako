@@ -11,3 +11,12 @@ conn.connectivity_change_delay = 0
 
 # NK console device
 persist.ttydev=ttyNK3
+
+#if out product surport trout chip, we set this
+ro.fm.chip.vendor=trout
+
+#if out product surport trout chip, we set this to support hci rset to power off
+#ro.bt.trout=true
+
+#if our product support single link version
+ro.system.property.singleconn=true

@@ -1,15 +1,6 @@
 
 MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so ump.ko mali.ko
 
-
-
-SPRD_FM_APP := FMPlayer
-
-BRCM_FM := \
-    fm.$(TARGET_PLATFORM) \
-    FmDaemon \
-    FmTest
-
 #FFOS specific macros, may move into a new file someday
 ENABLE_LIBRECOVERY := true
 PRODUCT_PROPERTY_OVERRIDES := \
@@ -92,8 +83,9 @@ PRODUCT_PACKAGES += \
 	modem_control
 
 PRODUCT_PACKAGES += \
-            $(BRCM_FM) \
-            $(SPRD_FM_APP)
+	libFMHalSource.so \
+	trout_genpskey
+
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
 	$(BOARDDIR)/init.sp8810.rc:root/init.sp8810.rc \
@@ -118,6 +110,5 @@ PRODUCT_COPY_FILES := \
 	frameworks/base/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml
 
 $(call inherit-product, $(BOARDDIR)/../common/apps/engineeringmodel/module.mk)
-BOARD_WLAN_DEVICE_REV       := bcm4330_b1
-$(call inherit-product, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)
-
+$(call inherit-product, device/sprd/partner/trout/wlan/device-itm.mk)
+$(call inherit-product, device/sprd/partner/trout/bluetooth/device-trout-bt.mk)

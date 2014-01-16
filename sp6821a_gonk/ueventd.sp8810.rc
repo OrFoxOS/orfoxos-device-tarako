@@ -37,3 +37,4 @@
 /dev/block/mmcblk0p7    0660     system  system
 /dev/block/mmcblk0p8    0660     system  system
 /dev/block/mmcblk0p9    0660     system  system
+/dev/Trout_FM           0666     system  audio

@@ -94,6 +94,9 @@ typedef enum {
 
 	ENG_AT_SSMP                     = 200,
 	ENG_AT_CMD_END,
+	ENG_AT_SET_SNVM = 250,
+	ENG_AT_SET_VALUE = 251,
+	ENG_AT_RESET = 252,
 }ENG_AT_CMD;
 
 

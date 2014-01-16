@@ -37,6 +37,25 @@ BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
 # use default init.rc
 TARGET_PROVIDES_INIT_RC := true
 
+BOARD_HAVE_BLUETOOTH := true
+BOARD_HAVE_BLUETOOTH_TROUT := true
+
+BOARD_WLAN_DEVICE			:= itm
+BOARD_WPA_SUPPLICANT_DRIVER 		:= NL80211
+BOARD_HOSTAPD_DRIVER 			:= NL80211
+WPA_SUPPLICANT_VERSION			:= VER_0_8_X
+BOARD_WPA_SUPPLICANT_PRIVATE_LIB	:= lib_driver_cmd_trout
+BOARD_HOSTAPD_PRIVATE_LIB		:= lib_driver_cmd_trout
+WIFI_DRIVER_FW_PATH_STA			:= "/system/lib/modules/itm_sta.ko"
+WIFI_DRIVER_FW_PATH_P2P			:= ""
+WIFI_DRIVER_FW_PATH_AP			:= "/system/lib/modules/itm_ap.ko"
+WIFI_DRIVER_FW_PATH_PARAM		:= ""
+WIFI_DRIVER_MODULE_PATH         	:= ""
+WIFI_DRIVER_MODULE_NAME         	:= "itm_wifi"
+HAVE_WLAN_CMCC_FEATURE      := true
+
+Trout_FM := true
+
 # board specific modules
 BOARD_USES_TINYALSA_AUDIO := true
 BOARD_USES_LINE_CALL := false
@@ -72,21 +91,6 @@ USE_RGB_VIDEO_LAYER :=true
 USE_BOOT_AT_DIAG := true
 
 USE_ENG_UART_USB_AUTO := true
-
-#BOARD_HAVE_BLUETOOTH := true
-#BOARD_HAVE_BLUETOOTH_BCM := true
-#BOARD_HAVE_FM_BCM := true
-#BOARD_USE_SPRD_FMAPP := true
-#BOARD_WPA_SUPPLICANT_DRIVER := NL80211
-#WPA_SUPPLICANT_VERSION     := VER_0_8_X
-#BOARD_WPA_SUPPLICANT_PRIVATE_LIB := lib_driver_cmd_bcmdhd
-#BOARD_HOSTAPD_DRIVER        := NL80211
-#BOARD_HOSTAPD_PRIVATE_LIB   := lib_driver_cmd_bcmdhd
-#BOARD_WLAN_DEVICE           := bcmdhd
-#WIFI_DRIVER_FW_PATH_PARAM   := "/sys/module/bcmdhd/parameters/firmware_path"
-#WIFI_DRIVER_FW_PATH_STA     := "/etc/wifi/fw_bcmdhd.bin"
-#WIFI_DRIVER_FW_PATH_P2P     := "/etc/wifi/fw_bcmdhd_p2p.bin"
-#WIFI_DRIVER_FW_PATH_AP      := "/etc/wifi/fw_bcmdhd_apsta.bin"
 
 SP6821A_FFOS_DEBUG := true
 
