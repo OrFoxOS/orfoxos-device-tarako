@@ -38,7 +38,7 @@
 
 namespace android{
 
-#define PREVIEW_BUF_NUM 8
+#define PREVIEW_BUF_NUM 2
 #define CAPTURE_BUF_NUM 1
 #define JPEGENC_BUF_NUM 1
 #define JPEGDECENC_Y_UV_OFFSET_MAX  0x400000
