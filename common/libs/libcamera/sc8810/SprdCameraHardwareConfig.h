@@ -348,9 +348,15 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	"2592x1944,2048x1536,1600x1200,1280x960,640x480"},
 #endif
 	 {"picture-size", "640x480"},
+#if 0
 	{"preview-size-values",
 	 "640x480,352x288,320x240,176x144"},
 	 {"preview-size", "640x480"},
+#else
+        {"preview-size-values",
+	 "480x320,352x288,320x240,176x144"},
+	 {"preview-size", "480x320"},
+#endif
 	{"video-size-values", "720x480,352x288,320x240,176x144"},
 	{"video-size", "176x144"},
 	{"preferred-preview-size-for-video", "320x240"},
@@ -398,13 +404,9 @@ struct config_element sprd_back_camera_hardware_config[] = {
         {"max-contrast", "6"},
         {"contrast-values", "0,1,2,3,4,5,6"},
         {"contrast", "3"}  ,
-#ifdef CONFIG_CAMERA_788
-	{"focus-mode-values", "infinity"},
-	{"focus-mode", "infinity"},
-#else
-	{"focus-mode-values", "auto,auto-multi,macro"},
-	{"focus-mode", "auto"},
-#endif
+        {"focus-mode-values", "infinity"},
+        {"focus-mode", "infinity"},
+        {"focus-distances", "2.0,2.5,3.75,Infinity"},
         {"min-exposure-compensation", "-3"},
         {"max-exposure-compensation", "3"},
         {"exposure-compensation","0"},
@@ -415,23 +417,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
         {"focal-length", "3.75"},
         {"horizontal-view-angle", "54"},
         {"vertical-view-angle", "54"},
-#ifndef CONFIG_CAMERA_788
-	{"flash-mode-values", "off,on,torch"},
-	{"flash-mode", "off"},
-	{"flash-mode-supported", "true"},
-#endif
-
-#ifdef CONFIG_CAMERA_788
-	{"focus-distances", "2.0,2.5,Infinity"},
-#else
-	{"focus-distances", "2.0,2.5,3.75"},
-#endif
 	{"max-num-detected-faces-hw", "0"},
-#ifdef CONFIG_CAMERA_788
-	{"max-num-focus-areas", "0"}
-#else
-	{"max-num-focus-areas", "3"}
-#endif
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_
