@@ -92,5 +92,8 @@ USE_BOOT_AT_DIAG := true
 
 USE_ENG_UART_USB_AUTO := true
 
+#light sensor
+BOARD_HAVE_TMD2771 := true
+
 SP6821A_FFOS_DEBUG := true
 

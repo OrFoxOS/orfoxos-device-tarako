@@ -28,7 +28,7 @@
 static pthread_once_t g_init = PTHREAD_ONCE_INIT;
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 
-char const *const LCD_FILE = "/sys/class/backlight/sprd_backlight/brightness";
+char const *const LCD_FILE = "/sys/class/leds/lcd-backlight/brightness";
 char const *const KEYBOARD_FILE = "/sys/class/leds/keyboard-backlight/brightness";
 
 void init_g_lock(void)
