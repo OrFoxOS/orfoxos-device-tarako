@@ -1154,10 +1154,10 @@ RESTART:
             }
             else
             {
-                MY_TRACE("VBC_CMD_HAL_RESTART try vbc_lock, pipe_name:%s.", para->vbpipe);
+                //MY_TRACE("VBC_CMD_HAL_RESTART try vbc_lock, pipe_name:%s.", para->vbpipe);
                 pthread_mutex_lock(&adev->vbc_lock);
-                MY_TRACE("VBC_CMD_HAL_RESTART get vbc_lock, pipe_name:%s.", para->vbpipe);
-                ALOGE("VBC_CMD_HAL_RESTART Error: vbpipe_name(%s), vbpipe_fd(%d) open failed, %s ", para->vbpipe, para->vbpipe_fd,strerror(errno));   //cp crash
+                //MY_TRACE("VBC_CMD_HAL_RESTART get vbc_lock, pipe_name:%s.", para->vbpipe);
+                //ALOGE("VBC_CMD_HAL_RESTART Error: vbpipe_name(%s), vbpipe_fd(%d) open failed, %s ", para->vbpipe, para->vbpipe_fd,strerror(errno));   //cp crash
                 if(adev->call_start &&
                         (adev->cur_vbpipe_fd==para->vbpipe_pre_fd/*only current vbpipe need to close*/)){                  //cp crash during call
                     mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
@@ -1171,7 +1171,7 @@ RESTART:
                     para->vbpipe_pre_fd = -1;
                     pthread_mutex_unlock(&adev->lock);
                 }
-                MY_TRACE("VBC_CMD_HAL_RESTART release vbc_lock, pipe_name:%s.", para->vbpipe);
+                //MY_TRACE("VBC_CMD_HAL_RESTART release vbc_lock, pipe_name:%s.", para->vbpipe);
                 pthread_mutex_unlock(&adev->vbc_lock);
             }
             sleep(1);
