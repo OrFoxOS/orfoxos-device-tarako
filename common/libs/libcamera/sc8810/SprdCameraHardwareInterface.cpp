@@ -294,65 +294,76 @@ status_t SprdCameraHardware::dump(int fd) const
 
 sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int buf_size, int num_bufs)
 {
-	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
+	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(sprd_camera_memory_t));
 	if(NULL == memory) {
 		ALOGE("wxz: Fail to GetPmem, memory is NULL.");
 		return NULL;
 	}
+	memset(memory, 0, sizeof(sprd_camera_memory_t));
+
 	camera_memory_t *camera_memory;
 	int paddr, psize;
-        int order = 0, acc = 1;
+	int order = 0, acc = 1;
 	while(acc < buf_size * num_bufs) {
 		order++;
 		acc = acc*2;
 	}
 	acc = camera_get_size_align_page(acc);
-        MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 
-	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
-
-        if(NULL == camera_memory) {
-                   goto getpmem_end;
-        }
-        if(0xFFFFFFFF == (uint32_t)camera_memory->data) {
-                 camera_memory = NULL;
-                 ALOGE("Fail to GetPmem().");
-                 goto getpmem_end;
-       }
-	pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+	if (NULL == pHeapIon
+		|| NULL == pHeapIon->getBase()
+		|| 0xFFFFFFFF == (uint32_t)pHeapIon->getBase()) {
+		goto getpmem_end;
+	}
 	memory->ion_heap = pHeapIon;
+	
+	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
+	if(NULL == camera_memory
+		|| 0xFFFFFFFF == (uint32_t)camera_memory->data ) {
+	    goto getpmem_end;
+	}
 	memory->camera_memory = camera_memory;
+
+	pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+	
+	if ( 0xFFFFFFFF == (uint32_t)paddr ){
+	    goto getpmem_end;
+	}
+
 	memory->phys_addr = paddr;
 	memory->phys_size = psize;
 	memory->handle = camera_memory->handle;
-	//memory->data = camera_memory->data;
 	memory->data = pHeapIon->getBase();
 
-       ALOGV("GetPmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
-                            memory->phys_addr, (uint32_t)camera_memory->data,
-                            camera_memory->size, memory->phys_size);
+	ALOGV("GetPmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+	                    memory->phys_addr, (uint32_t)camera_memory->data,
+	                    camera_memory->size, memory->phys_size);
+	return memory;
 
 getpmem_end:
-	return memory;
+	ALOGE("Fail to GetPmem().");
+	FreePmem(memory);
+	return NULL;
 }
 
 void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
 {
-        if(memory){
-                if(memory->camera_memory->release){
-                        memory->camera_memory->release(memory->camera_memory);
-                        memory->camera_memory = NULL;
-                } else {
-                        ALOGE("fail to FreePmem: NULL is camera_memory->release.");
-               }
+	if(memory){
+		if(memory->camera_memory && memory->camera_memory->release){
+			memory->camera_memory->release(memory->camera_memory);
+			memory->camera_memory = NULL;
+		} else {
+			ALOGE("fail to FreePmem: NULL is camera_memory->release.");
+		}
 		if(memory->ion_heap) {
 			delete memory->ion_heap;
 			memory->ion_heap = NULL;
 		}
-		memory = NULL;
-        } else{
-                ALOGV("FreePmem: NULL");
-        }
+		free(memory);
+	} else{
+		ALOGV("FreePmem: NULL");
+	}
 }
 
 bool SprdCameraHardware::initPreview()
