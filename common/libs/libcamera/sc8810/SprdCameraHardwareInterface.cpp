@@ -2577,6 +2577,7 @@ ALOGV("start to getCameraStateStr.");
             // Autofocus failures occur relatively often and are not fatal, so
             // we do not transition to QCS_ERROR for them.
             if (func != CAMERA_FUNC_START_FOCUS) {
+                obj->FreeCameraMem();
                 ALOGE("SprdCameraHardware::camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
                      parm4,
                      obj->getCameraStateStr(obj->mCameraState));
