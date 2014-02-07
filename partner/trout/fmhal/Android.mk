@@ -6,7 +6,7 @@ LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	frameworks/base/include
 
-LOCAL_LDLIBS ：= -lpthread 
+LOCAL_LDLIBS := -lpthread
 LOCAL_SHARED_LIBRARIES:= libcutils libutils libtinyalsa libaudioutils
 
 LOCAL_MODULE_TAGS := optional
