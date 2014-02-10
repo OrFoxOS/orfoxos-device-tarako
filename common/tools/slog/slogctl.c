@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2012 Spreadtrum Communications Inc.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -200,6 +213,10 @@ int main(int argc, char *argv[])
 	ret = recv_socket(sockfd, (void *)&cmd, sizeof(cmd));
         if (ret < 0) {
 		perror("recv failed");
+		return -1;
+	}
+	if(!strcmp(cmd.content,"FAIL")){
+		printf("slogctl cmd fail \n");
 		return -1;
 	}
 	printf("%s\n", cmd.content);

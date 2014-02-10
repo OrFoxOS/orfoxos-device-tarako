@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2012 Spreadtrum Communications Inc.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -301,6 +314,11 @@ int parse_config()
 
 	/* we use tmp log config file first */
 	if(stat(TMP_SLOG_CONFIG, &st)){
+		ret = mkdir(TMP_FILE_PATH, S_IRWXU | S_IRWXG | S_IRWXO);
+		if (-1 == ret && (errno != EEXIST)) {
+			err_log("mkdir %s failed.", TMP_FILE_PATH);
+			exit(0);
+		}
 		property_get("ro.debuggable", buffer, "");
 		if (strcmp(buffer, "1") != 0) {
 			if(!stat(DEFAULT_USER_SLOG_CONFIG, &st))
@@ -322,7 +340,19 @@ int parse_config()
 	fp = fopen(TMP_SLOG_CONFIG, "r");
 	if(fp == NULL) {
 		err_log("open file failed, %s.", TMP_SLOG_CONFIG);
-		return -1;
+		if (strcmp(buffer, "1") != 0) {
+			fp = fopen(DEFAULT_USER_SLOG_CONFIG, "r");
+			if(fp == NULL) {
+				err_log("open file failed, %s.", DEFAULT_USER_SLOG_CONFIG);
+				exit(0);
+			}
+		} else {
+			fp = fopen(DEFAULT_DEBUG_SLOG_CONFIG, "r");
+			if(fp == NULL) {
+				err_log("open file failed, %s.", DEFAULT_DEBUG_SLOG_CONFIG);
+				exit(0);
+			}
+		}
 	}
 
 	/* parse line by line */

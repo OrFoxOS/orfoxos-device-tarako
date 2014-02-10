@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2012 Spreadtrum Communications Inc.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
 #ifndef _SLOG_H
 #define _SLOG_H
 
@@ -56,7 +69,6 @@ enum {
 #define DEFAULT_USER_SLOG_CONFIG	"/system/etc/slog.conf.user"
 #define TMP_FILE_PATH			"/data/local/tmp/slog/"
 #define SLOG_SOCKET_FILE		TMP_FILE_PATH "slog_sock"
-#define PID_FILE			TMP_FILE_PATH "slog.pid"
 #define TMP_SLOG_CONFIG			TMP_FILE_PATH "slog.conf"
 #define DEFAULT_DUMP_FILE_NAME		"slog.tgz"
 #define FB_DEV_NODE			"/dev/graphics/fb0"
@@ -67,7 +79,7 @@ enum {
 #define MAXROLLLOGS			10
 #define TIMEOUT_FOR_SD_MOUNT		5 /* seconds */
 #define MODEM_CIRCULAR_SIZE		(2 * 1024 * 1024) /* 2 MB */
-#define SINGLE_BUFFER_SIZE		2048
+#define SINGLE_BUFFER_SIZE		(16 * 1024) /* 16k */
 #define RING_BUFFER_NUM			(MODEM_CIRCULAR_SIZE / SINGLE_BUFFER_SIZE)
 #define HOOK_MODEM_TARGET_DIR		"/data/log"
 
@@ -137,12 +149,13 @@ extern char top_logdir[MAX_NAME_LEN];
 extern char external_storage[MAX_NAME_LEN];
 extern struct slog_info *stream_log_head, *snapshot_log_head;
 extern struct slog_info *notify_log_head, *misc_log;
-extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_tid, modem_tid;
+extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_tid, modem_tid, modem_dump_memory_tid;
 extern int slog_enable;
 extern int internal_log_size;
 extern int screenshot_enable;
 extern int slog_save_all;
 extern int hook_modem_flag;
+extern int dev_shark_flag;
 
 /* function */
 extern int parse_config();
@@ -152,6 +165,7 @@ extern void *notify_log_handler(void *arg);
 extern void *bt_log_handler(void *arg);
 extern void *tcp_log_handler(void *arg);
 extern void *modem_log_handler(void *arg);
+extern void *modem_dump_memory_handler(void *arg);
 extern int stream_log_handler_started;
 extern int snapshot_log_handler_started;
 extern int notify_log_handler_started;

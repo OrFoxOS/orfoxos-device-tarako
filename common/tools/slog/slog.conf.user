@@ -3,18 +3,18 @@ disable
 
 #type	name		value
 var	logpath		external
-var	screenshot	disable
+var	screenshot	enable
 var	slogsaveall	off
 
 #type	name	state	size	level
-stream	kernel	off	0	7
-stream	main	off	0	7
-stream	system	off	0	8
-stream	radio	off	0	0
-stream	modem	on	0	5
+stream	kernel	on	0	7
+stream	main	on	0	7
+stream	system	on	0	8
+stream	radio	on	0	0
+stream	modem	off	0	5
 stream	bt	off	0	7
 stream	tcp	off	0	7
-misc	misc	off	0	5
+misc	misc	on	0	5
 
 #type	name		opt	level	inter	action
 snap	meminfo		file	6	300	/proc/meminfo

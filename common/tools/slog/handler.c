@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2012 Spreadtrum Communications Inc.
+//                 Last Change:  2013-03-06 09:39:00
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +29,8 @@
 #include <cutils/sockets.h>
 #include <cutils/logprint.h>
 #include <cutils/event_tag_map.h>
+#include <cutils/properties.h>
+#include "private/android_filesystem_config.h"
 
 #include "slog.h"
 
@@ -152,6 +169,7 @@ void cp_file(char *path, char *new_path)
 	fp_dest = fopen(new_path, "w");
 	if(fp_dest == NULL) {
 		err_log("open notify dest file failed!");
+		fclose(fp_src);
 		return;
 	}
 
@@ -302,11 +320,18 @@ void *notify_log_handler(void *arg)
 			info = info->next;
 			continue;
 		}
-		ret = mkdir(info->content, S_IRWXU | S_IRWXG | S_IRWXO);
+		ret = mkdir(info->content, S_IRWXU | S_IRWXG | S_IXOTH);
 		if (-1 == ret && (errno != EEXIST)) {
 			err_log("mkdir %s failed.", info->content);
 			exit(0);
 		}
+
+		ret = chown(info->content, AID_SYSTEM, AID_SYSTEM);
+		if (ret < 0) {
+			err_log("chown failed.");
+			exit(0);
+		}
+
 		debug_log("notify add watch %s\n", info->content);
 		wd = inotify_add_watch(notify_fd, info->content, IN_MODIFY);
 		if(wd == -1) {
@@ -368,7 +393,7 @@ void *notify_log_handler(void *arg)
  */
 static void open_device(struct slog_info *info, char *path)
 {
-	info->fd_device = open(path, O_RDONLY);
+	info->fd_device = open(path, O_RDWR);
 	if(info->fd_device < 0){
 		err_log("Unable to open log device '%s', close '%s' log.", path, info->name);
 		info->state = SLOG_STATE_OFF;
@@ -591,22 +616,221 @@ static int write_from_buffer(int fd, char *buf, int len)
 	return result;
 }
 
+#define MODEM_TD_DEVICE_PROPERTY "ro.modem.t.enable"
+#define MODEM_W_DEVICE_PROPERTY "ro.modem.w.enable"
+
+static void handle_dump_shark_modem_memory()
+{
+	char buffer[MAX_NAME_LEN];
+	time_t t;
+	struct tm tm;
+	char modem_property[8];
+	int ret_t, ret_w;
+
+	err_log("Start to dump CP memory");
+
+	property_get(MODEM_TD_DEVICE_PROPERTY, modem_property, "");
+	ret_t = atoi(modem_property);
+	property_get(MODEM_W_DEVICE_PROPERTY, modem_property, "");
+	ret_w = atoi(modem_property);
+
+	/* add timestamp */
+	t = time(NULL);
+	localtime_r(&t, &tm);
+	if(ret_t == 1) {
+		sprintf(buffer, "cat /proc/cpt/mem > %s/%s/modem/modem_memory_%d%02d%02d%02d%02d%02d.log", current_log_path, top_logdir,
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	} else if(ret_w == 1) {
+		sprintf(buffer, "cat /proc/cpw/mem > %s/%s/modem/modem_memory_%d%02d%02d%02d%02d%02d.log", current_log_path, top_logdir,
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	} else {
+		err_log("Modem device is not TD and W!");
+	}
+	system(buffer);
+	err_log("Dump CP memory completed");
+}
+
+#define MODEMRESET_PROPERTY "persist.sys.sprd.modemreset"
+#define MODEM_SOCKET_NAME       "modemd"
+#define MODEM_SOCKET_BUFFER_SIZE 128
+static int dump_modem_memory_flag = 0;
+static int modem_reset_flag = 0;
+static int modem_thread_first_start = 1;
+static struct slog_info *info_modem;
+
+void *modem_dump_memory_handler(void *arg)
+{
+	char modemrst_property[8];
+        char cmddumpmemory[2]={'t',0x0a};
+	int soc_fd, ret, n, err;
+	char buffer[MODEM_SOCKET_BUFFER_SIZE];
+
+connect_socket:
+	memset(modemrst_property, 0, sizeof(modemrst_property));
+	property_get(MODEMRESET_PROPERTY, modemrst_property, "");
+	ret = atoi(modemrst_property);
+	err_log("%s is %s, ret=%d", MODEMRESET_PROPERTY, modemrst_property, ret);
+
+        do {
+                soc_fd = socket_local_client( MODEM_SOCKET_NAME,
+                                ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+                err_log("bind server %s,soc_fd=%d", MODEM_SOCKET_NAME, soc_fd);
+                sleep(10);
+        } while(soc_fd < 0);
+
+        for(;;) {
+                memset(buffer, 0, MODEM_SOCKET_BUFFER_SIZE);
+                sleep(1);
+                n = read(soc_fd, buffer, MODEM_SOCKET_BUFFER_SIZE);
+                if( n > 0 ) {
+			err_log("get %d bytes %s", n, buffer);
+			if(strstr(buffer, "Modem Assert") != NULL) {
+				if(ret == 0) {
+					if(dev_shark_flag == 1)
+						handle_dump_shark_modem_memory();
+					else
+						dump_modem_memory_flag = 1;
+				} else {
+					modem_reset_flag =1;
+					err = pthread_kill(modem_tid, SIGUSR1);
+					if(err != 0)
+						err_log("pthread_kill failed");
+					if(info_modem->fd_device)
+						close(info_modem->fd_device);
+					if(info_modem->fd_out)
+						close(info_modem->fd_out);
+					modem_log_handler_started = 0;
+					err_log("waiting for Modem Alive.");
+									}
+			} else if(strstr(buffer, "Modem Alive") != NULL) {
+				if(modem_reset_flag == 1)
+					pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
+				modem_reset_flag = 0;
+                        }
+                } else if(n == 0) {
+			err_log("get 0 bytes, sleep 10s, reconnect socket.");
+			sleep(10);
+			close(soc_fd);
+			goto connect_socket;
+		}
+        }
+
+        close(soc_fd);
+}
+
+static void handle_dump_modem_file(struct slog_info *info)
+{
+	int save_fd;
+	int ret,n;
+	int finish = 0;
+	char buffer[SINGLE_BUFFER_SIZE];
+	char path[MAX_NAME_LEN];
+	time_t t;
+	struct tm tm;
+	fd_set readset;
+	int result;
+	struct timeval timeout;
+	char cmddumpmemory[2]={'3',0x0a};
+
+write_cmd:
+	n = write(info->fd_device, cmddumpmemory, 2);
+	if (n <= 0) {
+		close(info->fd_device);
+		sleep(1);
+		open_device(info, MODEM_LOG_SOURCE);
+		goto write_cmd;
+	}
+
+	/* add timestamp */
+	t = time(NULL);
+	localtime_r(&t, &tm);
+	sprintf(path, "%s/%s/modem/modem_memory_%d%02d%02d%02d%02d%02d.log", current_log_path, top_logdir,
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	save_fd = open(path, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
+	if (save_fd < 0) {
+		err_log("open modem log file failed!");
+		return;
+	}
+
+	do {
+		memset(buffer,0,SINGLE_BUFFER_SIZE);
+                FD_ZERO(&readset);
+                FD_SET(info->fd_device, &readset);
+                timeout.tv_sec = 1;
+                timeout.tv_usec = 0;
+		ret = select(info->fd_device + 1, &readset, NULL, NULL, &timeout);
+
+		if( 0 == ret ){
+			err_log("select timeout ->save finsh");
+			finish = 1;
+		} else if( ret > 0 ) {
+read_again:
+			n = read(info->fd_device, buffer, SINGLE_BUFFER_SIZE);
+
+			if (n == 0) {
+				close(info->fd_device);
+				sleep(1);
+				open_device(info, MODEM_LOG_SOURCE);
+			} else if (n < 0) {
+				err_log("fd=%d read %d is lower than 0", info->fd_device, n);
+				sleep(1);
+				goto read_again;
+			} else {
+				if(save_fd > 0)
+					write_from_buffer(save_fd, buffer, n);
+			}
+		} else {
+			err_log("select error");
+		}
+	} while( finish == 0 );
+
+	return;
+}
+
+static void modem_thread_sig_handler(int sig)
+{
+	err_log("get a signal %d.", sig);
+	pthread_exit(0);
+}
+
+static void setup_signal()
+{
+	struct sigaction act;
+
+	memset(&act, 0, sizeof(act));
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+
+#define SIGNAL(s, handler)      do { \
+		act.sa_handler = handler; \
+		if (sigaction(s, &act, NULL) < 0) \
+			err_log("Couldn't establish signal handler (%d): %m", s); \
+	} while (0)
+
+	SIGNAL(SIGUSR1, modem_thread_sig_handler);
+
+	return;
+}
+
 void *modem_log_handler(void *arg)
 {
 	struct slog_info *info;
 	int buffer_start = 0, buffer_end = 0;
 	int buffer_len[RING_BUFFER_NUM];
 	unsigned char *ring_buffer_table;
-	int old_flags = 0, ret;
+	int ret;
 	int data_fd;
 	char buffer[MAX_NAME_LEN];
 	time_t t;
 	struct tm tm;
+	fd_set readset;
+	int result;
+	struct timeval timeout;
+
+	setup_signal();
 
 	if(slog_enable == SLOG_DISABLE)
 		return NULL;
-
-	ring_buffer_table = malloc(MODEM_CIRCULAR_SIZE);
 
 	info = stream_log_head;
 	while (info) {
@@ -615,13 +839,16 @@ void *modem_log_handler(void *arg)
 			continue;
 		}
 
-		open_device(info, MODEM_LOG_SOURCE);
-		old_flags = fcntl(info->fd_device, F_GETFL);
+		if(info->state == SLOG_STATE_ON) {
+			if(slog_enable == SLOG_ENABLE)
+				info->fd_out = gen_outfd(info);
+			else
+				info->fd_out = -1;
+		} else
+			return NULL;
 
-		if(slog_enable == SLOG_ENABLE && info->state == SLOG_STATE_ON)
-			info->fd_out = gen_outfd(info);
-		else
-			info->fd_out = -1;
+		open_device(info, MODEM_LOG_SOURCE);
+
 		break;
 	}
 
@@ -629,20 +856,50 @@ void *modem_log_handler(void *arg)
 		err_log("modem log disabled!");
 		return NULL;
 	}
+
+	info_modem = info;
+	if(modem_thread_first_start == 1) {
+		pthread_create(&modem_dump_memory_tid, NULL, modem_dump_memory_handler, NULL);
+		modem_thread_first_start = 0;
+	}
+
+	ring_buffer_table = malloc(MODEM_CIRCULAR_SIZE);
+
 	modem_log_handler_started = 1;
 	while(slog_enable != SLOG_DISABLE) {
-		memset((char *)ring_buffer_table + buffer_end * SINGLE_BUFFER_SIZE, 0, SINGLE_BUFFER_SIZE);
-		if (fcntl(info->fd_device, F_SETFL, old_flags | O_NONBLOCK) == -1) {
-			err_log("fcntl failed!");
+
+		if(dump_modem_memory_flag == 1) {
+			err_log("Modem Assert!");
+			handle_dump_modem_file(info);
+			dump_modem_memory_flag = 0;
+		}
+
+		FD_ZERO(&readset);
+		FD_SET(info->fd_device, &readset);
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		result = select(info->fd_device + 1, &readset, NULL, NULL, &timeout);
+
+		if(result == 0)
+			continue;
+
+		if(result < 0) {
 			sleep(1);
 			continue;
 		}
+
+		if(FD_ISSET(info->fd_device, &readset) <= 0){
+			continue;
+                }
+
+		memset((char *)ring_buffer_table + buffer_end * SINGLE_BUFFER_SIZE, 0, SINGLE_BUFFER_SIZE);
 
 		ret = read(info->fd_device, (char *)ring_buffer_table + buffer_end * SINGLE_BUFFER_SIZE, SINGLE_BUFFER_SIZE);
 		if (ret <= 0) {
 			if(errno != EAGAIN) {
 				err_log("read modem log failed.");
 				close(info->fd_device);
+				sleep(20);
 				open_device(info, MODEM_LOG_SOURCE);
 			}
 			sleep(1);
@@ -657,18 +914,20 @@ void *modem_log_handler(void *arg)
 			log_size_handler(info);
 		}
 
+		/* handle ring_buffer pointer */
 		buffer_end = (buffer_end + 1) % RING_BUFFER_NUM;
 		if(buffer_end == buffer_start)
 			buffer_start = (buffer_start + 1) % RING_BUFFER_NUM;
 
+		/* hook modem log */
 		if(hook_modem_flag != 1)
 			continue;
 
 		/* add timestamp */
 		t = time(NULL);
 		localtime_r(&t, &tm);
-		sprintf(buffer, "/data/log/modem_%d%02d%02d%02d%02d.log",
-					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+		sprintf(buffer, "/data/log/modem_%d%02d%02d%02d%02d%02d.log",
+					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
 		data_fd = open(buffer, O_WRONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
 		if(data_fd < 0) {
@@ -676,6 +935,7 @@ void *modem_log_handler(void *arg)
 			break;
 		}
 
+		/*handle hook_modem_log*/
 		while(1) {
 			ret = write_from_buffer(data_fd, (char *)ring_buffer_table + buffer_start * SINGLE_BUFFER_SIZE,
 				buffer_len[buffer_start]);
@@ -686,6 +946,9 @@ void *modem_log_handler(void *arg)
 		close(data_fd);
 		hook_modem_flag = 0;
 	}
+
+	free(ring_buffer_table);
+	ring_buffer_table = NULL;
 
 	/* close all open fds */
 	if(info->fd_device)
@@ -715,6 +978,7 @@ void *stream_log_handler(void *arg)
 	stream_log_handler_started = 1;
 
 	info = stream_log_head;
+	FD_ZERO(&readset_tmp);
 	/*open all of the stream devices*/
 	while(info){
 		if(info->state != SLOG_STATE_ON){
@@ -725,9 +989,6 @@ void *stream_log_handler(void *arg)
 			open_device(info, KERNEL_LOG_SOURCE);
 			info->fd_out = gen_outfd(info);
 			add_timestamp(info);
-		} else if(!strncmp(info->name, "modem", 5)) {
-			info = info->next;
-			continue;
 		} else if( !strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6) || !strncmp(info->name, "radio", 5) ){
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
 			open_device(info, devname);
@@ -810,15 +1071,13 @@ void *stream_log_handler(void *arg)
 
 				info->outbytecount += ret;
 				log_size_handler(info);
-			} else if(!strncmp(info->name, "modem", 5)) {
-				info = info->next;
-				continue;
 			} else if(!strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6)
 				|| !strncmp(info->name, "radio", 5) ) {
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
 				if(ret <= 0) {
 					err_log("read %s log failed!", info->name);
 					close(info->fd_device);
+					sleep(1);
 					sprintf(devname, "%s/%s", "/dev/log", info->name);
 					open_device(info, devname);
 					info = info->next;
@@ -834,6 +1093,8 @@ void *stream_log_handler(void *arg)
 					close(info->fd_out);
 					info->fd_out = gen_outfd(info);
 					add_timestamp(info);
+					info = info->next;
+					continue;
 				}
 
 				info->outbytecount += ret;
@@ -953,11 +1214,11 @@ void *tcp_log_handler(void *arg)
 			err_log("mkdir %s failed.", buffer);
 			exit(0);
 		}
-		sprintf(buffer, "%s/%s/%s/%s.log",
+		sprintf(buffer, "%s/%s/%s/%s.pcap",
 			current_log_path, top_logdir, tcp->log_path, tcp->log_basename);
 		file_name_rotate(buffer);
 
-		execl("/system/xbin/tcpdump", "tcpdump", "-i", "any", "-p", "-s 0", "-w", buffer, (char *)0);
+		execl("/system/bin/tcp", "tcp", "-i", "any", "-p", "-s 0", "-w", buffer, (char *)0);
 		exit(0);
 	}
 
