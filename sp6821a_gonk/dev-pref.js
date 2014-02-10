@@ -17,6 +17,6 @@ pref("hal.processPriorityManager.gonk.FOREGROUND.KillUnderMB", 4);
 
 pref("hal.processPriorityManager.gonk.BACKGROUND_PERCEIVABLE.KillUnderMB", 6);
 
-pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderMB", 15);
+pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderMB", 20);
 
 pref("hal.processPriorityManager.gonk.notifyLowMemUnderMB", 10);
