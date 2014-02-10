@@ -9,7 +9,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.moz.ril.query_icc_count=true \
 	ro.moz.mute.call.to_ril=true \
 	ro.moz.ril.numclients=2 \
-	ro.moz.ril.data_reg_on_demand=true
+	ro.moz.ril.data_reg_on_demand=true \
+	ro.moz.wifi.unloaddriver=1
 
 
 # original apps copied from generic_no_telephony.mk
@@ -84,6 +85,7 @@ PRODUCT_PACKAGES += \
 
 PRODUCT_PACKAGES += \
 	libFMHalSource.so \
+	fm.$(TARGET_PLATFORM) \
 	trout_genpskey
 
 PRODUCT_COPY_FILES := \
