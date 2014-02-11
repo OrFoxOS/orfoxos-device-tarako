@@ -129,6 +129,16 @@ service engpcclient /system/bin/engpcclient
     disabled
     oneshot
 
+service setrfnvconfig /system/bin/logwrapper /system/bin/eng_rf_nv_config
+    class core
+    user root
+    oneshot
+
+service setrfnvupdate /system/bin/logwrapper /system/bin/eng_rf_nv_update
+    class core
+    user root
+    oneshot
+
 service engservice /system/bin/engservice
     class main
     user system
@@ -229,6 +239,12 @@ service pbap /system/bin/sdptool add --channel=19 PBAP
 
 service akmd /system/bin/akmd8975 -m 3
     class main
+    oneshot
+
+service trout_genpskey /system/bin/trout_genpskey
+    class main
+    user system
+    disabled
     oneshot
 
 service hciattach /system/bin/hciattach -n /dev/ttyS0 bcsp 3000000 noflow

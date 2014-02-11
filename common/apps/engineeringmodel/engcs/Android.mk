@@ -172,6 +172,39 @@ LOCAL_MODULE := engpcclient
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
 
+#ENG RF NV CONFIG
+CAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+LOCAL_PRELINK_MODULE    := false
+LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libengclient
+LOCAL_STATIC_LIBRARIES  :=
+LOCAL_LDLIBS        += -Idl
+#LOCAL_CFLAGS        += -D$(BOARD_PRODUCT_NAME)
+
+LOCAL_C_INCLUDES    +=  external/sqlite/dist/
+
+LOCAL_SRC_FILES     := eng_rf_nv_config.c   \
+		       eng_sqlite.c	
+
+LOCAL_MODULE := eng_rf_nv_config
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+ 
+CAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)  
+LOCAL_PRELINK_MODULE    := false  
+LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libengclient  
+LOCAL_STATIC_LIBRARIES  :=  
+LOCAL_LDLIBS        += -Idl  
+LOCAL_C_INCLUDES    +=  external/sqlite/dist/  
+LOCAL_SRC_FILES     := eng_rf_nv_update.c   \
+						eng_sqlite.c      
+LOCAL_MODULE := eng_rf_nv_update  
+LOCAL_MODULE_TAGS := optional  
+include $(BUILD_EXECUTABLE)  
+
+    
 #ENG SETBTWIFI ADDR
 CAL_PATH := $(call my-dir)
 
@@ -185,7 +218,10 @@ LOCAL_C_INCLUDES    +=  external/sqlite/dist/
 
 LOCAL_SRC_FILES     := eng_setbtwifiaddr.c   \
 		       eng_sqlite.c	
-
+ifeq ($(BOARD_HAVE_BLUETOOTH_TROUT),true)
+LOCAL_CFLAGS:= \
+       -DBT_TROUT
+endif
 LOCAL_MODULE := engsetmacaddr
 
 LOCAL_MODULE_TAGS := optional
