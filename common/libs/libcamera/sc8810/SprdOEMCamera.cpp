@@ -231,6 +231,12 @@ LOCAL EXIF_PRI_DESC_T                 		*g_dc_primary_img_desc_ptr;
 /* get from sensor_drv */
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T     	*g_dc_spec_pic_taking_cond_ptr;
 
+int camera_rotation(uint32_t agree, uint32_t width, uint32_t height, uint32_t in_addr, uint32_t out_addr);
+void camera_capture_change_memory(uint32_t output_width, uint32_t output_height,  uint32_t output_addr, uint32_t input_addr);
+
+#ifdef CONFIG_CAMERA_ROTATION_CAPTURE
+extern uint32_t getSensorFixRotation(int sensorId);
+#endif
 
 static void close_device(void);
 static int camera_copy(SCALE_DATA_FORMAT_E output_fmt, uint32_t output_width, uint32_t output_height, uint32_t output_y_addr,
@@ -261,6 +267,42 @@ static int device_write(int fd, uint8_t *buf, uint32_t count)
         r = write(fd, buf, count);
         return r;
 }
+
+
+#ifdef CONFIG_CAMERA_ROTATION_CAPTURE
+static uint32_t getRotation(/*IN*/ uint32_t sensorId, 
+                            /*IN*/ uint32_t setEncodeRotation,
+                            /*OUT*/uint32_t &ajustRotation)
+{
+    uint32_t needExchange = 0;
+    uint32_t sensorFixRotation = getSensorFixRotation(sensorId);
+
+    //assert(0 == setEncodeRotation || 90 == setEncodeRotation
+    //       || 180 == setEncodeRotation || 270 == setEncodeRotation);
+    uint32_t fixRotationFactor = (sensorFixRotation / 90) % 2;
+    uint32_t encodeRotationFactor = (setEncodeRotation / 90) % 2;
+     
+
+    if (0 == sensorId) {//back Camera
+        if (fixRotationFactor == encodeRotationFactor) {
+            needExchange = 1;
+        }
+        ajustRotation = setEncodeRotation;
+    }
+    else if( 1 == sensorId) {//front camera, so we should do the mirror case
+        if (0 == setEncodeRotation || 180 == setEncodeRotation) {
+            ajustRotation = 180 - setEncodeRotation;
+        }
+        else {
+            ajustRotation = setEncodeRotation;
+        }
+        if (fixRotationFactor == encodeRotationFactor) {
+            needExchange = 1;
+        }
+    }
+    return needExchange;
+}
+#endif
 
 uint32_t camera_get_size_align_page(uint32_t size)
 {
@@ -1073,6 +1115,42 @@ camera_ret_code_type camera_encode_picture(
 	camera_ret_code_type ret_type = CAMERA_SUCCESS;
 	pthread_attr_t attr;
 	g_callback = callback;
+
+#ifdef CONFIG_CAMERA_ROTATION_CAPTURE
+{
+        uint32_t needExchange = 0;
+        uint32_t ajustRotation = 0;
+        needExchange = getRotation(g_dcam_obj->getCameraId(),
+                                   s_camera_info.set_encode_rotation,
+                                   ajustRotation);
+        if (0 != ajustRotation) {
+            uint32_t size = s_camera_info.dcam_out_width * s_camera_info.dcam_out_height * 2;
+            uint32_t phys_addr;
+            uint32_t ret;
+            uint32_t *virt_addr = (uint32_t *)(g_dcam_obj->get_temp_mem_by_HW(size, 1, &phys_addr));
+            if (NULL == virt_addr) {
+                    ALOGE("SPRD OEM:Fail to malloc capture temp memory in camera_encode_picture, size: 0x%x.", size);
+                    return CAMERA_FAILED;
+            }
+            camera_capture_change_memory(s_camera_info.dcam_out_width, s_camera_info.dcam_out_height,
+                                     (uint32_t)virt_addr, 
+                                     (uint32_t)((uint8_t *)(frame->buf_Virt_Addr)));
+            ret = camera_rotation(ajustRotation, s_camera_info.dcam_out_width,
+                                  s_camera_info.dcam_out_height, phys_addr,
+                                  frame->buffer_phy_addr);
+            g_dcam_obj->free_temp_mem_by_HW();
+        }
+        if (needExchange) {
+            uint32_t temp = g_dcam_dimensions.picture_width;
+            g_dcam_dimensions.picture_width = g_dcam_dimensions.picture_height;
+            g_dcam_dimensions.picture_height = temp;
+            temp = g_thumbnail_properties.width;
+            g_thumbnail_properties.width = g_thumbnail_properties.height;
+            g_thumbnail_properties.height = temp;
+        }
+        s_camera_info.set_encode_rotation = 0;
+}
+#endif
 
 #if !CAM_OUT_YUV420_UV	//wxz20120316: convrt VU to UV
 {

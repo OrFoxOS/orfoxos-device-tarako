@@ -127,7 +127,7 @@ public:
     virtual status_t    storeMetaDataInBuffers(bool enable);
     SprdCameraHardware(int cameraId);
     virtual             ~SprdCameraHardware();	
-    inline  int         getCameraId() const;
+    int         getCameraId() const;
 private:
 
 	sprd_camera_memory_t* GetPmem(const char *device_name, int buf_size, int num_bufs);
