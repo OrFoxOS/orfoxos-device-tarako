@@ -36,6 +36,7 @@
 #include "../sc8810/SprdOEMCamera.h"
 #include "../sc8810/SprdCameraHardwareConfig.h"
 //#include "SprdCameraHardwareStub.h"
+#include <linux/ion.h>
 
 #ifdef CONFIG_CAMERA_ISP
 extern "C" {
@@ -217,9 +218,18 @@ gralloc_module_t const* SprdCameraHardware::mGrallocHal;
 #define ROUND_TO_PAGE(x)  (((x)+0xfff)&~0xfff)
 
     // Called with mStateLock held!
+static int ion_cache_fd = 0;
 bool SprdCameraHardware::startCameraIfNecessary()
 {
         if (mCameraState == QCS_INIT) {
+		if (ion_cache_fd == 0) {
+			ion_cache_fd = open("/dev/ion", O_RDWR);
+			if (ion_cache_fd < 0)
+				ALOGE("CameraIfNecessary: fail to open /dev/ion for ion page cache.");
+			else
+				ioctl(ion_cache_fd, ION_IOC_DISABLE_CACHE, NULL);
+		}
+
                 ALOGV("waiting for camera_init to initialize.");
                 if(CAMERA_SUCCESS != camera_init(g_camera_id)){
                         mCameraState = QCS_INIT;
@@ -569,7 +579,13 @@ void SprdCameraHardware::release()
         mStateLock.unlock();
         ALOGV("release X");
         ALOGV("mLock:release E.\n");
-    }
+
+	if (ion_cache_fd > 0) {
+		ioctl(ion_cache_fd, ION_IOC_ENABLE_CACHE, NULL);
+		close(ion_cache_fd);
+		ion_cache_fd = 0;
+	}
+}
 
 SprdCameraHardware::~SprdCameraHardware()
 {
