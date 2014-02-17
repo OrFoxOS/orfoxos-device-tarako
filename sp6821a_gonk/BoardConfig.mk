@@ -29,7 +29,11 @@ TARGET_NO_BOOTLOADER := false
 UBOOT_DEFCONFIG := sp6821a
 
 # config kernel
+ifeq ($(TARGET_BUILD_VARIANT), user)
+KERNEL_DEFCONFIG := sp6821a-vlx-user_defconfig
+else
 KERNEL_DEFCONFIG := sp6821a-vlx_defconfig
+endif
 USES_UNCOMPRESSED_KERNEL := true
 BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_CMDLINE := console=ttyS1,115200n8
