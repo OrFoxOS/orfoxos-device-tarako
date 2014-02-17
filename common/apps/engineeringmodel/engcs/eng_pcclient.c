@@ -814,24 +814,7 @@ void eng_check_factorymode_fornand(void)
 		fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC);
 		if(fd > 0)
 			close(fd);
-		if (strstr(config_property, "adb")) { 
-			property_set_check("sys.usb.config","adb,vser,gser");
-			property_set_check("persist.sys.usb.config","mass_storage,adb,vser,gser");
-		} else {
-			property_set_check("sys.usb.config","vser,gser");
-			property_set_check("persist.sys.usb.config","vser,gser");
-		}
-	} else if (status == 0) {
-		if (strstr(config_property, "vser,gser")) {
-			if (strstr(config_property, "adb")) {
-				property_set_check("sys.usb.config","adb");
-				property_set_check("persist.sys.usb.config","adb");
-			} else {
-				property_set_check("sys.usb.config","");
-				property_set_check("persist.sys.usb.config","");
-			}
-		} 
-		remove(ENG_FACOTRYMODE_FILE);
+        property_set_check("sys.usb.config","mass_storage,adb,vser,gser");
 	} else {
 		remove(ENG_FACOTRYMODE_FILE);
 	}
