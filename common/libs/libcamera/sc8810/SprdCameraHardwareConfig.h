@@ -371,9 +371,9 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"preview-frame-rate", "20"},
 	{"preview-fps-range-values", "(10000,30000)"},
 	{"preview-fps-range", "10000,30000"},
-	{"jpeg-thumbnail-size-values", "320x240,0x0"},
-	{"jpeg-thumbnail-width","320"},
-	{"jpeg-thumbnail-height", "240"},
+	{"jpeg-thumbnail-size-values", "480x360,0x0"},
+	{"jpeg-thumbnail-width","480"},
+	{"jpeg-thumbnail-height", "360"},
 	{"jpeg-thumbnail-quality", "80"},
 	{"effect-values",
 #ifdef CONFIG_CAMERA_788
