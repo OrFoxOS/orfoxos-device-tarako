@@ -10,7 +10,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 	ro.moz.mute.call.to_ril=true \
 	ro.moz.ril.numclients=2 \
 	ro.moz.ril.data_reg_on_demand=true \
-	ro.moz.wifi.unloaddriver=1
+	ro.moz.wifi.unloaddriver=1\
+        ro.moz.ril.radio_off_wo_card=true
 
 
 # original apps copied from generic_no_telephony.mk
