@@ -800,20 +800,16 @@ static void property_set_check(const char *property, const char *value)
 
 void eng_check_factorymode_fornand(void)
 {
-	int ret;
 	int fd;
 	int status = eng_sql_string2int_get(ENG_TESTMODE);
-	char status_buf[8];
-	char config_property[64];
-
 
 #ifdef USE_BOOT_AT_DIAG
 	ENG_LOG("%s: status=%x\n",__func__, status);
-	property_get("persist.sys.usb.config", config_property, "");
 	if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
 		fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC);
 		if(fd > 0)
 			close(fd);
+        property_set_check("persist.sys.usb.config","mass_storage,adb,vser,gser");
         property_set_check("sys.usb.config","mass_storage,adb,vser,gser");
 	} else {
 		remove(ENG_FACOTRYMODE_FILE);

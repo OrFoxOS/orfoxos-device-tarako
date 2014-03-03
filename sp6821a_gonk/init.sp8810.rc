@@ -158,10 +158,6 @@ service engsetmacaddr /system/bin/engsetmacaddr
     user system
     oneshot
 
-service usbmond /system/bin/usbmond
-    class main
-    user root
-
 service phoneserver /system/bin/phoneserver
     class core
     user system

@@ -227,23 +227,6 @@ LOCAL_MODULE := engsetmacaddr
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
 
-include $(CLEAR_VARS)
-
-LOCAL_PRELINK_MODULE    := false
-
-LOCAL_SRC_FILES := \
-        usbmon.c
-
-LOCAL_SHARED_LIBRARIES := \
-        libcutils
-
-LOCAL_MODULE := usbmond
-
-LOCAL_MODULE_TAGS := optional
-
-include $(BUILD_EXECUTABLE)
-
-
 #ENG TEST WIFI AND GPS
 #CAL_PATH := $(call my-dir)
 
