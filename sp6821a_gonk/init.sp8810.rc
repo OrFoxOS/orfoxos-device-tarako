@@ -284,6 +284,10 @@ service slog /system/bin/slog
     class main
     user root
 
+service engmoded /system/bin/engmoded
+    class main
+    user root
+
 #create symlink
 service pty_symlink /system/bin/ext_symlink.sh -p
     user root
