@@ -40,7 +40,6 @@ LOCAL_SRC_FILES := \
 			SensorBase.cpp \
 			InputEventReader.cpp \
 			Lis3dhSensor.cpp \
-			AkmSensor.cpp \
 			sensors.cpp
 
 ifeq ($(BOARD_HAVE_TMD2771),true)

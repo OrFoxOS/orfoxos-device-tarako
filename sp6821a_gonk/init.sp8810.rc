@@ -34,14 +34,6 @@ on post-fs-data
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
 
-    chown system system /sys/class/compass/akm8975/enable_acc
-    chown system system /sys/class/compass/akm8975/enable_mag
-    chown system system /sys/class/compass/akm8975/enable_ori
-    chown system system /sys/class/compass/akm8975/delay_acc
-    chown system system /sys/class/compass/akm8975/delay_mag
-    chown system system /sys/class/compass/akm8975/delay_ori
-    chown system system /sys/class/compass/akm8975/accel
-
     chmod 660 /proc/nk/resume
     chmod 660 /proc/nk/restart
     chmod 660 /proc/nk/guest-02/dsp_bank
@@ -231,10 +223,6 @@ service pbap /system/bin/sdptool add --channel=19 PBAP
     user bluetooth
     group bluetooth net_bt_admin
     disabled
-    oneshot
-
-service akmd /system/bin/akmd8975 -m 3
-    class main
     oneshot
 
 service trout_genpskey /system/bin/trout_genpskey

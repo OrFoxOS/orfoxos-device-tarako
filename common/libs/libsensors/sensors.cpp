@@ -42,7 +42,6 @@
 #error "Sensor configuration ERROR: No sensor is defined."
 #endif
 
-#include "AkmSensor.h"
 #ifdef SENSORHAL_PL_TMD2771
 #include "SensorTMD2771.h"
 #endif
@@ -70,23 +69,12 @@
 
 /* The SENSORS Module */
 static const struct sensor_t sSensorList[] = {
-        { "AK8975 3-axis Magnetic field sensor",
-          "Asahi Kasei Microdevices",
-          1,
-		  SENSORS_MAGNETIC_FIELD_HANDLE,
-          SENSOR_TYPE_MAGNETIC_FIELD, 1228.8f,
-		  CONVERT_M, 0.35f, 10000, { } },
 #ifdef SENSORHAL_ACC_LIS3DH
         { "ST LIS3DH 3-axis Accelerometer",
           "ST",
           1, SENSORS_ACCELERATION_HANDLE,
           SENSOR_TYPE_ACCELEROMETER, (GRAVITY_EARTH * 2.0f),
 		  (GRAVITY_EARTH)/ 1024.0f, 0.145f, 10000, { } },
-        { "AK8975 Orientation sensor",
-          "Asahi Kasei Microdevices",
-          1, SENSORS_ORIENTATION_HANDLE,
-          SENSOR_TYPE_ORIENTATION, 360.0f,
-		  CONVERT_O, 0.495f, 10000, { } },
 #endif
 #ifdef SENSORHAL_ACC_ADXL346
         { "Analog Devices ADXL345/6 3-axis Accelerometer",
@@ -94,11 +82,6 @@ static const struct sensor_t sSensorList[] = {
           1, SENSORS_ACCELERATION_HANDLE,
           SENSOR_TYPE_ACCELEROMETER, (GRAVITY_EARTH * 16.0f),
 		  (GRAVITY_EARTH * 16.0f) / 4096.0f, 0.145f, 10000, { } },
-        { "AK8975 Orientation sensor",
-          "Asahi Kasei Microdevices",
-          1, SENSORS_ORIENTATION_HANDLE,
-          SENSOR_TYPE_ORIENTATION, 360.0f,
-		  CONVERT_O, 0.495f, 10000, { } },
 #endif
 #ifdef SENSORHAL_ACC_KXTF9
         { "Kionix KXTF9 3-axis Accelerometer",
@@ -106,11 +89,6 @@ static const struct sensor_t sSensorList[] = {
           1, SENSORS_ACCELERATION_HANDLE,
           SENSOR_TYPE_ACCELEROMETER, (GRAVITY_EARTH * 2.0f),
 		  (GRAVITY_EARTH) / 1024.0f, 0.7f, 10000, { } },
-        { "AK8975 Orientation sensor",
-          "Asahi Kasei Microdevices",
-          1, SENSORS_ORIENTATION_HANDLE,
-          SENSOR_TYPE_ORIENTATION, 360.0f,
-		  CONVERT_O, 1.05f, 10000, { } },
 #endif
 #ifdef SENSORHAL_PL_TMD2771
          { "TMD2771 Light sensor",
@@ -178,8 +156,7 @@ struct sensors_poll_context_t {
 private:
     enum {
         acc          = 0,
-        akm          = 1,
-        pls	 	= 2,
+        pls	 	= 1,
         numSensorDrivers,
         numFds,
     };
@@ -214,11 +191,6 @@ sensors_poll_context_t::sensors_poll_context_t()
     mPollFds[acc].fd = mSensors[acc]->getFd();
     mPollFds[acc].events = POLLIN;
     mPollFds[acc].revents = 0;
-
-    mSensors[akm] = new AkmSensor();
-    mPollFds[akm].fd = mSensors[akm]->getFd();
-    mPollFds[akm].events = POLLIN;
-    mPollFds[akm].revents = 0;
 
 #ifdef SENSORHAL_PL_TMD2771
 
@@ -257,9 +229,6 @@ int sensors_poll_context_t::handleToDriver(int handle) {
 	switch (handle) {
 		case ID_A:
 			return acc;
-		case ID_M:
-		case ID_O:
-			return akm;
 		case ID_L:
 		case ID_P:
 			return pls;
@@ -357,9 +326,6 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
                     // no more data for this sensor
                     mPollFds[i].revents = 0;
                 }
-				if ((0 != nb) && (acc == i)) {
-					((AkmSensor*)(mSensors[akm]))->setAccel(&data[nb-1]);
-				}
                 count -= nb;
                 nbEvents += nb;
                 data += nb;
