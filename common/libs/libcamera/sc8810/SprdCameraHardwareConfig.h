@@ -343,6 +343,10 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"picture-size-values", "2048x1536,1600x1200,1280x960,640x480"},
 #elif defined(CONFIG_CAMERA_SUPPORT_2M)
 	{"picture-size-values", "1600x1200,1280x960,640x480"}, 
+#elif defined(CONFIG_CAMERA_SUPPORT_130W)
+        {"picture-size-values", "1280x960,640x480"},
+#elif defined(CONFIG_CAMERA_SUPPORT_50W)
+        {"picture-size-values", "640x480"},
 #else
 	{"picture-size-values",
 	"2592x1944,2048x1536,1600x1200,1280x960,640x480"},
