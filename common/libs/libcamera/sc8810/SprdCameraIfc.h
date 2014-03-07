@@ -21,7 +21,14 @@
 #define FEATURE_NATIVELINUX
 #define FEATURE_CAMERA_ENCODE_PROPERTIES
 
-#define JPEG_ENC_HW_PMEM (1024 * 1024) //0x0100000 // 2M
+#if defined(CONFIG_CAMERA_SUPPORT_130W)
+    #define JPEG_ENC_HW_PMEM (768 * 1024) //0x0100000 // 130W
+#elif defined(CONFIG_CAMERA_SUPPORT_50W)
+    #define JPEG_ENC_HW_PMEM (256 * 1024) //0x0100000 // 50W
+#else
+    #define JPEG_ENC_HW_PMEM (1024 * 1024) //0x0100000 // 2M
+#endif
+
 #define JPEG_ENC_HW_BUF_NUM 2
 
 typedef enum {

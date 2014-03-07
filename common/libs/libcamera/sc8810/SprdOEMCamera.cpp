@@ -4295,6 +4295,7 @@ void *camera_capture_thread(void *client_data)
 		picture_width = g_dcam_dimensions.picture_height;
 		picture_height= g_dcam_dimensions.picture_width;
 	}
+
 	if(s_camera_info.is_zoom || s_camera_info.is_interpolation)
 	{
 		ALOGV("SPRD OEM:camera_capture_thread,dcam out:w=%d,h=%d.picture size %d %d",
@@ -4352,6 +4353,7 @@ void *camera_capture_thread(void *client_data)
                                     s_camera_info.dcam_out_width,
                                     s_camera_info.dcam_out_height);
 
+                    }
  #if 0
     {
 		FILE *fp = NULL;
@@ -4362,13 +4364,11 @@ void *camera_capture_thread(void *client_data)
 		fp = fopen("/data/sensor_yy.raw", "wb");
 		fwrite(g_buffers[0].virt_addr, 1, s_camera_info.dcam_out_width*s_camera_info.dcam_out_height, fp);
                    fclose(fp);
-		fp = fopen("/data/sensor_uv_uv.raw", "wb");
+		fp = fopen("/data/sensor_uv_uv1.raw", "wb");
 		fwrite( g_buffers[0].u_virt_addr, 1, s_camera_info.dcam_out_width*s_camera_info.dcam_out_height, fp);
 		fclose(fp);
    }
 #endif
-
-                    }
 		ret = camera_crop_interpolation(SCALE_DATA_YUV422,
                                                                      picture_width,//            g_dcam_dimensions.picture_width,
                                                                          picture_height,//        g_dcam_dimensions.picture_height,
@@ -4392,6 +4392,7 @@ void *camera_capture_thread(void *client_data)
 		ALOGE(" s_camera_info.temp_y_phy_addr,=0x%x.", s_camera_info.temp_y_phy_addr);
 		fp = fopen("/data/sensor_y.raw", "wb");
 		fwrite(s_camera_info.temp_y_virt_addr, 1, g_dcam_dimensions.picture_width*g_dcam_dimensions.picture_height, fp);
+                fclose(fp);
 		fp = fopen("/data/sensor_uv.raw", "wb");
 		fwrite(s_camera_info.temp_uv_virt_addr, 1, g_dcam_dimensions.picture_width*g_dcam_dimensions.picture_height, fp);
 		fclose(fp);
@@ -4628,7 +4629,6 @@ int camera_capture_mem_alloc(uint32_t dcam_out_width,uint32_t dcam_out_height)
                         0,(uint32_t)g_buffers[0].virt_addr,g_buffers[0].u_virt_addr,g_buffers[0].phys_addr,g_buffers[0].u_phys_addr ,
                         g_buffers[0].length);
             /*first capture buffer*/
-
             s_camera_info.temp_y_phy_addr = g_capture_phys_addr;
             s_camera_info.temp_y_virt_addr = g_capture_virt_addr;
             s_camera_info.temp_uv_phy_addr = g_capture_phys_addr+mem_size/2;
@@ -4740,6 +4740,8 @@ int camera_capture_init(uint32_t mem_size,int32_t capture_fmat)
 	s_camera_info.dcam_out_height = 0;
 	s_camera_info.is_zoom = 0;
 
+        camera_get_sensor_output_size(&sensor_output_w, &sensor_output_h);
+
 	CLEAR (fmt);
 	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;    
          camera_set_rot_angle(&g_cam_params.orientation_parm,&g_rotation_parm);
@@ -4751,28 +4753,28 @@ int camera_capture_init(uint32_t mem_size,int32_t capture_fmat)
 
 		if( 90 == g_rotation_parm)
 		{
-			fmt.fmt.pix.width = g_dcam_dimensions.picture_height;
-		        fmt.fmt.pix.height = g_dcam_dimensions.picture_width;
+			fmt.fmt.pix.width = sensor_output_h;   //g_dcam_dimensions.picture_height;
+		        fmt.fmt.pix.height = sensor_output_w;    //g_dcam_dimensions.picture_width;
 			fmt.fmt.raw_data[198] = 1;
 		}
 		else if(270 == g_rotation_parm)
 		{
-			fmt.fmt.pix.width = g_dcam_dimensions.picture_height;
-		        fmt.fmt.pix.height = g_dcam_dimensions.picture_width;
+			fmt.fmt.pix.width = sensor_output_h;    //g_dcam_dimensions.picture_height;
+		        fmt.fmt.pix.height = sensor_output_w;    //g_dcam_dimensions.picture_width;
 			fmt.fmt.raw_data[198] = 2;
 		}
 		else if (180 == g_rotation_parm)
 		{
 			fmt.fmt.raw_data[198] = 3;
-			fmt.fmt.pix.width = g_dcam_dimensions.picture_width;
-		        fmt.fmt.pix.height = g_dcam_dimensions.picture_height;
+			fmt.fmt.pix.width = sensor_output_w;    //g_dcam_dimensions.picture_width;
+		        fmt.fmt.pix.height = sensor_output_h;   //g_dcam_dimensions.picture_height;
 		}
 	}
 	else
 	{
                 /* 0 */
-		fmt.fmt.pix.width = g_dcam_dimensions.picture_width;
-	        fmt.fmt.pix.height = g_dcam_dimensions.picture_height;
+		fmt.fmt.pix.width = sensor_output_w;  //g_dcam_dimensions.picture_width
+	        fmt.fmt.pix.height = sensor_output_h;  //g_dcam_dimensions.picture_height
 	}
 
 	if(SENSOR_IMAGE_FORMAT_JPEG != s_camera_info.sensor_out_format)
@@ -4893,7 +4895,7 @@ int camera_capture_init(uint32_t mem_size,int32_t capture_fmat)
 		return -1;
 	}
 
-	camera_get_sensor_output_size(&sensor_output_w, &sensor_output_h);
+	//camera_get_sensor_output_size(&sensor_output_w, &sensor_output_h);
 	if((sensor_output_w * sensor_output_h) > (fmt.fmt.pix.width * fmt.fmt.pix.height))
 	{
 		s_camera_info.dcam_out_width = sensor_output_w;

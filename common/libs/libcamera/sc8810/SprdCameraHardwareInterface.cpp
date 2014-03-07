@@ -459,6 +459,8 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
         mJpegMaxSize = mRawSize;
         buffer_size = mJpegMaxSize;
         mJpegHeap = NULL;
+
+#if 0
         if(mRawWidth>=2592)
                 buffer_size=16*1024*1024;
 
@@ -478,6 +480,8 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
                 buffer_size=16*1024*1024;
 
 #endif
+#endif
+
         ALOGV("initRaw: initializing mRawHeap.");
 
         camera_get_sensor_max_size(&sensor_max_width,&sensor_max_height);
