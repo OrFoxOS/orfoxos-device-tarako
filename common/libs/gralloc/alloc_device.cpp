@@ -470,13 +470,14 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 
 	int preferIon = 0;
 	private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
+#if 0
 	if ((format == HAL_PIXEL_FORMAT_RGBA_8888)
 		&& (((stride == m->info.xres) && (h == m->info.yres)) ||((h == m->info.xres) && (stride == m->info.yres)) )
 		&& !(usage & GRALLOC_USAGE_HW_FB)) {
 			usage |= GRALLOC_USAGE_PRIVATE_0;
 			preferIon = 1;
 	}
-
+#endif
 	int err;
 	if(usage & (GRALLOC_USAGE_PRIVATE_0 | GRALLOC_USAGE_PRIVATE_1))
 	{
