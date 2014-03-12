@@ -4,14 +4,16 @@ MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so 
 #FFOS specific macros, may move into a new file someday
 ENABLE_LIBRECOVERY := true
 PRODUCT_PROPERTY_OVERRIDES := \
-	ro.moz.omx.hw.max_width=720 \
-	ro.moz.omx.hw.max_height=576 \
-	ro.moz.ril.query_icc_count=true \
-	ro.moz.mute.call.to_ril=true \
-	ro.moz.ril.numclients=2 \
-	ro.moz.ril.data_reg_on_demand=true \
-	ro.moz.wifi.unloaddriver=1\
-        ro.moz.ril.radio_off_wo_card=true
+    ro.moz.omx.hw.max_width=720 \
+    ro.moz.omx.hw.max_height=576 \
+    ro.moz.ril.query_icc_count=true \
+    ro.moz.mute.call.to_ril=true \
+    ro.moz.ril.numclients=2 \
+    ro.moz.ril.data_reg_on_demand=true \
+    ro.moz.wifi.unloaddriver=1 \
+    ro.moz.ril.radio_off_wo_card=true \
+    ro.moz.ril.0.network_types = gsm \
+    ro.moz.ril.1.network_types = gsm
 
 
 # original apps copied from generic_no_telephony.mk
