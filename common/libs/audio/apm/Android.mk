@@ -3,7 +3,7 @@
 # Copyright 2012 Spreadtrum
 #
 
-ifneq ($(strip $(SP6821A_FFOS_DEBUG)),true)
+ifeq ($(strip $(SPRDROID4.0_DEV)),true)
 # This is the audio policy manager
 
   LOCAL_PATH := $(call my-dir)
