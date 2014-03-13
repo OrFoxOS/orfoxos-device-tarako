@@ -881,7 +881,7 @@ void camera_set_exif_info(void)
 	ALOGV("camera_set_exif_info: virtual get value = %x, ptr=%x \n",
 		dc_exif_info_ptr_virt->primary.basic.ResolutionUnit , dc_exif_info_ptr_virt->primary.basic.XResolution.numerator);
 
- 	queryparm.id 		= (uint32)dc_exif_info_ptr_phy;
+	queryparm.id 		= (uint32)dc_exif_info_ptr_virt;
 	queryparm.index 	= g_jpegenc_params.stream_buf_len;
 
         ret =  xioctl(fd, VIDIOC_QUERYMENU, &queryparm);
