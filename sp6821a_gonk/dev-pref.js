@@ -9,14 +9,14 @@ pref("dom.ipc.processPriorityManager.backgroundLRUPoolLevels", 2);
 pref("hal.processPriorityManager.gonk.enableOOBPKiller", true);
  
 
-pref("hal.processPriorityManager.gonk.MASTER.KillUnderMB", 1);
+pref("hal.processPriorityManager.gonk.MASTER.KillUnderKB", 1024);
 
-pref("hal.processPriorityManager.gonk.FOREGROUND_HIGH.KillUnderMB", 2);
+pref("hal.processPriorityManager.gonk.FOREGROUND_HIGH.KillUnderKB", 2048);
 
-pref("hal.processPriorityManager.gonk.FOREGROUND.KillUnderMB", 4);
+pref("hal.processPriorityManager.gonk.FOREGROUND.KillUnderKB", 4096);
 
-pref("hal.processPriorityManager.gonk.BACKGROUND_PERCEIVABLE.KillUnderMB", 6);
+pref("hal.processPriorityManager.gonk.BACKGROUND_PERCEIVABLE.KillUnderKB", 6144);
 
-pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderMB", 20);
+pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderKB", 20480);
 
-pref("hal.processPriorityManager.gonk.notifyLowMemUnderMB", 10);
+pref("hal.processPriorityManager.gonk.notifyLowMemUnderKB", 10240);
