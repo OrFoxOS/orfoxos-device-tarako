@@ -32,14 +32,6 @@
 #define INITIAL_PROFILE_SIZE 8
 #define INITIAL_PROFILE_ITEM_SIZE 2
 
-//#define PGA_DEBUG
-
-#ifdef PGA_DEBUG
-#define PGA_TRACE  ALOGW
-#else
-#define PGA_TRACE
-#endif
-
 struct pga_attribute_item {
 	struct mixer_ctl *ctl;
 	int max;
@@ -274,7 +266,7 @@ static void audio_pga_start_tag(void *data, const XML_Char *tag_name,
 	/* Look at tags */
 	if (strcmp(tag_name, "codec") == 0) {
 		if (strcmp(attr[0], "name") == 0) {
-			PGA_TRACE("The codec name is %s", attr[1]);
+			ALOGI("The codec name is %s", attr[1]);
 		} else {
 			ALOGE("Unnamed codec!");
 		}
@@ -283,7 +275,7 @@ static void audio_pga_start_tag(void *data, const XML_Char *tag_name,
 	else if (strcmp(tag_name, "profile") == 0) {
 		/* Obtain the profile name */
 		if (strcmp(attr[0], "name") == 0) {
-			PGA_TRACE("profile name is '%s'", attr[1]);
+			ALOGD("profile name is '%s'", attr[1]);
 			state->profile = profile_create(pga, attr[1]);
 		} else {
 			ALOGE("Unnamed profile!");
@@ -301,7 +293,7 @@ static void audio_pga_start_tag(void *data, const XML_Char *tag_name,
 				ALOGE("'%s' No bit filed!", attr[0]);
 				goto attr_err;
 			}
-			PGA_TRACE("pga name is '%s', val is '%s'", attr[1], attr[3]);
+			ALOGD("pga name is '%s', val is '%s'", attr[1], attr[3]);
 			item.ctl = mixer_get_ctl_by_name(pga->mixer, attr[1]);
 			if ( !item.ctl ) {
 				ALOGE("'%s' can not access this sound card!", attr[1]);
@@ -321,7 +313,7 @@ static void audio_pga_start_tag(void *data, const XML_Char *tag_name,
 			if ( !ctl ) {
 				ALOGE("'%s' can not access this sound card!", attr[1]);
 			}
-			PGA_TRACE("mixer name is '%s'", attr[1]);
+			ALOGD("mixer name is '%s'", attr[1]);
 			state->attribute_item = attribute_create(pga, ctl);
 		} else {
 			ALOGE("Unnamed attribute!");
@@ -341,7 +333,7 @@ static void audio_pga_start_tag(void *data, const XML_Char *tag_name,
 						mixer_ctl_get_name_d(state->attribute_item->ctl));
 				goto attr_err;
 			}
-			PGA_TRACE("attribute max is '%s', inverse is '%s'", attr[1], attr[3]);
+			ALOGD("attribute max is '%s', inverse is '%s'", attr[1], attr[3]);
 			value = atoi((char *)attr[1]);
 			state->attribute_item->max = value;
 			value = atoi((char *)attr[3]);
@@ -376,7 +368,7 @@ static void audio_pga_set(struct mixer_ctl *ctl, int value,
 	if (attribute_item->inverse) {
 		value = attribute_item->max - value;
 	}
-	PGA_TRACE("'%s' set to %d", mixer_ctl_get_name_d(ctl), value);
+	ALOGI("'%s' set to %d", mixer_ctl_get_name_d(ctl), value);
 	audio_pga_mixer_set(ctl, value);
 }
 
@@ -488,7 +480,7 @@ int audio_pga_apply(struct audio_pga *pga, int val, const char *name)
 		return -1;
 	}
 
-	PGA_TRACE("'%s' apply", name);
+	ALOGD("'%s' apply", name);
 
 	profile = profile_get_by_name(pga, name);
 	if (!profile) {

@@ -28,9 +28,9 @@
 //#define AUDDEV_DRV_DEBUG
 
 #ifdef AUDDEV_DRV_DEBUG
-#define AUDDEV_PRINT      ALOGW
+#define AUDDEV_PRINT      printk
 #else
-#define AUDDEV_PRINT(...)
+#define AUDDEV_PRINT
 #endif  // AUDDEV_DRV_DEBUG
 
 /**---------------------------------------------------------------------------*

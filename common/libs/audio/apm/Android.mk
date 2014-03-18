@@ -3,9 +3,8 @@
 # Copyright 2012 Spreadtrum
 #
 
-ifeq ($(strip $(SPRDROID4.0_DEV)),true)
 # This is the audio policy manager
-
+ifeq ($(strip $(SPRDROID4.0_DEV)),true)
   LOCAL_PATH := $(call my-dir)
 
   include $(CLEAR_VARS)
