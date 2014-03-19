@@ -20,3 +20,8 @@ pref("hal.processPriorityManager.gonk.BACKGROUND_PERCEIVABLE.KillUnderKB", 6144)
 pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderKB", 20480);
 
 pref("hal.processPriorityManager.gonk.notifyLowMemUnderKB", 14336);
+
+// Geolocation configuration to use the Mozilla Location Service.
+pref("geo.provider.use_mls", true);
+pref("geo.wifi.uri", "https://location.services.mozilla.com/v1/geolocate?key=%MOZ_MOZILLA_API_KEY%");
+pref("geo.cell.scan", true);
