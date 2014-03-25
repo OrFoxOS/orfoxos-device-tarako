@@ -15,9 +15,11 @@ pref("hal.processPriorityManager.gonk.FOREGROUND_HIGH.KillUnderKB", 2048);
 
 pref("hal.processPriorityManager.gonk.FOREGROUND.KillUnderKB", 4096);
 
-pref("hal.processPriorityManager.gonk.BACKGROUND_PERCEIVABLE.KillUnderKB", 6144);
+pref("hal.processPriorityManager.gonk.BACKGROUND_PERCEIVABLE.KillUnderKB", 18432);
 
-pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderKB", 20480);
+pref("hal.processPriorityManager.gonk.BACKGROUND_HOMESCREEN.KillUnderKB", 18432);
+
+pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderKB", 24576);
 
 pref("hal.processPriorityManager.gonk.notifyLowMemUnderKB", 14336);
 
