@@ -69,3 +69,4 @@ PRODUCT_LOCALES := zh_CN zh_TW en_US
 
 # Using Mozilla API key to support MLS
 export MOZILLA_MLS_KEY_FILE=$(ANDROID_BUILD_TOP)/$(BOARDDIR)/mls.key
+export GAIA_DISTRIBUTION_DIR=$(PWD)/device/sprd/sp6821a_gonk/

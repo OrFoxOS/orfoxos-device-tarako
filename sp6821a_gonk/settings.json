@@ -1,0 +1,4 @@
+{
+  "apz.force-enable": false,
+  "debugger.remote-mode": "adb-devtools"
+}
