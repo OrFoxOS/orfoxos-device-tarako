@@ -124,6 +124,13 @@ on fs
     mount yaffs2 mtd@cache /cache nosuid nodev
     mkdir /productinfo 0774 system system
 
+    mkdir /runtimenv 0774 system system
+    mount yaffs2 mtd@runtimenv /runtimenv nosuid nodev
+    mkdir /backupfixnv 0774 system system
+    mount yaffs2 mtd@backupfixnv /backupfixnv nosuid nodev
+    mkdir /fixnv  0774 system system
+    mount yaffs2 mtd@fixnv /fixnv nosuid nodev
+
     symlink /system/res /res
     symlink /system/bin /bin
 # ---------------------------- spreadtrum on fs section end
@@ -135,7 +142,6 @@ on post-fs
     # We chown/chmod /cache again so because mount is run as root + defaults
     chown system cache /cache
     chmod 0770 /cache
-
 # ---------------------------- spreadtrum on post-fs section start
     chown system system /productinfo
     chmod 0774 /productinfo
