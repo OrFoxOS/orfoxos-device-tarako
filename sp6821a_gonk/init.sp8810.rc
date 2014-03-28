@@ -97,7 +97,7 @@ service charge /bin/charge
 #start nvitem daemon.
 service nvm_daemon /system/bin/nvm_daemon
     class main
-    user system
+    user root
     group system radio shell
     oneshot
 
