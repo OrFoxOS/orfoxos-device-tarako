@@ -15,3 +15,8 @@
 #
 
 add_lunch_combo sp6821a_gonk-userdebug
+
+export MOZ_CHROME_MULTILOCALE="bn-BD en-US"
+export L10NBASEDIR=$PWD/gecko-l10n
+export PYTHONPATH=$PWD/gecko-l10n/compare-locales/lib
+export PATH=$PATH:$PWD/gecko-l10n/compare-locales/scripts

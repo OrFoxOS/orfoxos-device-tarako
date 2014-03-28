@@ -70,3 +70,16 @@ PRODUCT_LOCALES := zh_CN zh_TW en_US
 # Using Mozilla API key to support MLS
 export MOZILLA_MLS_KEY_FILE=$(ANDROID_BUILD_TOP)/$(BOARDDIR)/mls.key
 export GAIA_DISTRIBUTION_DIR=$(PWD)/device/sprd/sp6821a_gonk/
+export GAIA_APP_SRCDIRS=apps external-apps outoftree_apps customize_apps/engmode/assets customize_apps/ValidationTools/assets
+export PRODUCTION=1
+export MOZILLA_OFFICIAL=1
+export NOFTU=1
+export LOCALE_BASEDIR=$(PWD)/gaia-l10n/
+export LOCALES_FILE=$(PWD)/device/sprd/sp6821a_gonk/languages.json
+export GAIA_DEFAULT_LOCALE=en-US
+export GAIA_KEYBOARD_LAYOUTS=en,bn-Avro,bn-Probhat
+ifneq ($(findstring bn-BD, $(MOZ_CHROME_MULTILOCALE)),) # bn-BD,Bengali
+PRODUCT_COPY_FILES += \
+    external/moztt/Lohit/lohit-bengali-ttf-2.5.3/Lohit-Bengali.ttf:system/fonts/Lohit-Bengali.ttf \
+    $(NULL)
+endif
