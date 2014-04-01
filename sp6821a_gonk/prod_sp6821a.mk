@@ -82,8 +82,3 @@ export LOCALE_BASEDIR=$(PWD)/gaia-l10n/
 export LOCALES_FILE=$(PWD)/device/sprd/sp6821a_gonk/languages.json
 export GAIA_DEFAULT_LOCALE=en-US
 export GAIA_KEYBOARD_LAYOUTS=en,bn-Avro,bn-Probhat
-ifneq ($(findstring bn-BD, $(MOZ_CHROME_MULTILOCALE)),) # bn-BD,Bengali
-PRODUCT_COPY_FILES += \
-    external/moztt/Lohit/lohit-bengali-ttf-2.5.3/Lohit-Bengali.ttf:system/fonts/Lohit-Bengali.ttf \
-    $(NULL)
-endif
