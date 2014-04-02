@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <semaphore.h>
 
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
@@ -186,9 +187,8 @@ struct tiny_private_ctl {
 
 struct stream_routing_manager {
     pthread_t        routing_switch_thread;
-    pthread_mutex_t  device_switch_mutex;
-    pthread_cond_t   device_switch_cv;
     bool             is_exit;
+    sem_t           device_switch_sem;
 };
 
 struct tiny_audio_device {
@@ -547,9 +547,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
 static void select_devices_signal(struct tiny_audio_device *adev)
 {
     ALOGI("select_devices_signal starting...");
-    pthread_mutex_lock(&adev->routing_mgr.device_switch_mutex);
-    pthread_cond_signal(&adev->routing_mgr.device_switch_cv);
-    pthread_mutex_unlock(&adev->routing_mgr.device_switch_mutex);
+    sem_post(&adev->routing_mgr.device_switch_sem);
     ALOGI("select_devices_signal finished.");
 }
 
@@ -2580,12 +2578,8 @@ static void *stream_routing_thread_entry(void * adev)
     struct tiny_audio_device *cur_adev = (struct tiny_audio_device *)adev;
     while(!cur_adev->routing_mgr.is_exit) {
         ALOGI("stream_routing_thread looping now...");
-        pthread_mutex_lock(&cur_adev->routing_mgr.device_switch_mutex);
-        pthread_cond_wait(&cur_adev->routing_mgr.device_switch_cv,
-                            &cur_adev->routing_mgr.device_switch_mutex);
-        /* switch device routing here.*/
+        sem_wait(&cur_adev->routing_mgr.device_switch_sem);
         do_select_devices(cur_adev);
-        pthread_mutex_unlock(&cur_adev->routing_mgr.device_switch_mutex);
         ALOGI("stream_routing_thread looping done.");
     }
     ALOGW("stream_routing_thread_entry exit!!!");
@@ -2597,6 +2591,12 @@ static int stream_routing_manager_create(struct tiny_audio_device *adev)
     int ret;
 
     adev->routing_mgr.is_exit = false;
+    /* init semaphore to signal thread */
+    ret = sem_init(&adev->routing_mgr.device_switch_sem, 0, 0);
+    if (ret) {
+        ALOGE("sem_init falied, code is %s", strerror(errno));
+        return ret;
+    }
     /* create a thread to manager the device routing switch.*/
     ret = pthread_create(&adev->routing_mgr.routing_switch_thread, NULL,
                             stream_routing_thread_entry, (void *)adev);
@@ -2604,9 +2604,7 @@ static int stream_routing_manager_create(struct tiny_audio_device *adev)
         ALOGE("pthread_create falied, code is %d", ret);
         return ret;
     }
-    /* initialize mutex and condition variable objects */
-    pthread_mutex_init(&adev->routing_mgr.device_switch_mutex, NULL);
-    pthread_cond_init(&adev->routing_mgr.device_switch_cv, NULL);
+
     return ret;
 }
 
@@ -2614,8 +2612,7 @@ static void stream_routing_manager_close(struct tiny_audio_device *adev)
 {
     adev->routing_mgr.is_exit = true;
     /* release associated thread resource.*/
-    pthread_mutex_destroy(&adev->routing_mgr.device_switch_mutex);
-    pthread_cond_destroy(&adev->routing_mgr.device_switch_cv);
+    sem_destroy(&adev->routing_mgr.device_switch_sem);
 }
 
 static int adev_open(const hw_module_t* module, const char* name,
