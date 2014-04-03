@@ -77,12 +77,6 @@ service zram /system/xbin/zram.sh
 #    class main
 #    user root
 
-#start rawdata daemon.
-service rawdatad /bin/rawdatad
-    class core
-    user system
-    oneshot
-
 service vcharged /bin/vcharged
     class core
     user system
