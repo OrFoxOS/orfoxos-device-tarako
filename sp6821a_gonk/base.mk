@@ -49,10 +49,8 @@ PRODUCT_PACKAGES := \
 	hcidump \
 	bttest\
 	calibration_init \
-	rawdatad \
 	nvm_daemon \
 	modemd \
-	usbmond \
 	mfserial
 
 # own copyright packages files
