@@ -5,8 +5,8 @@
 #include <errno.h>
 #include "common.h"
 
-#define LCD_BACKLIGHT_DEV			"/sys/class/backlight/sprd_backlight/brightness"
-#define LCD_BACKLIGHT_MAX_DEV		"/sys/class/backlight/sprd_backlight/max_brightness"
+#define LCD_BACKLIGHT_DEV			"/sys/devices/platform/lcd-backlight/leds/lcd-backlight/brightness"
+#define LCD_BACKLIGHT_MAX_DEV		"/sys/devices/platform/lcd-backlight/leds/lcd-backlight/max_brightness"
 /* TODO fix the following definition to control keyboard backlight 
  * then add HAVE_KEYBOARD_BACKLIGHT in BoardConfig.mk to enable them
  * */
