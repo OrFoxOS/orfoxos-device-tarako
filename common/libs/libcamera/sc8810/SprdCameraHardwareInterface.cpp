@@ -303,12 +303,14 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(const char *device_name, int b
 
 	camera_memory_t *camera_memory;
 	int paddr, psize;
+#if 0
 	int order = 0, acc = 1;
 	while(acc < buf_size * num_bufs) {
 		order++;
 		acc = acc*2;
 	}
-	acc = camera_get_size_align_page(acc);
+#endif
+	int acc = camera_get_size_align_page(buf_size * num_bufs);
 	MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 
 	if (NULL == pHeapIon
@@ -391,7 +393,7 @@ bool SprdCameraHardware::initPreview()
                 preview_buff_cnt += 1;
                 ALOGV("initPreview: rotation, increase buffer: %d \n", preview_buff_cnt);
         }
-        buffer_size += (1024 * 32);   // allow other 32k ion memory to prevent over write
+       // buffer_size += (1024 * 32);   // allow other 32k ion memory to prevent over write
 
         mPreviewHeap = GetPmem("/dev/pmem_adsp", buffer_size, preview_buff_cnt);
         if(NULL == mPreviewHeap)
@@ -484,7 +486,7 @@ bool SprdCameraHardware::initRaw(bool initJpegHeap)
         }
         ALOGV("CAMERA HARD:initRaw:mRawHeap size = %d, interpoation_flag= %d",buffer_size,interpoation_flag);
         buffer_size = camera_get_size_align_page(buffer_size);
-        buffer_size += (1024 * 32); //alloc more 32k ion memory to prevent over write
+        //buffer_size += (1024 * 32); //alloc more 32k ion memory to prevent over write
         ALOGV("CAMERA HARD:initRaw:mRawHeap align size = %d .",buffer_size);
 
         mRawHeap = GetPmem("/dev/pmem_adsp", buffer_size, kRawBufferCount);
