@@ -1,6 +1,8 @@
 import init.sp8810.usb.rc
 
 on early-init
+    export MOZ_CRASHREPORTER 1
+    export MOZ_CRASHREPORTER_DUMP_FB 1
     export EXTERNAL_STORAGE /mnt/sdcard
     mkdir /mnt/sdcard 0000 system system
     symlink /mnt/sdcard /sdcard

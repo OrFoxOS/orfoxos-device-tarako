@@ -8,8 +8,7 @@ pref("dom.ipc.processPriorityManager.backgroundLRUPoolLevels", 2);
 // calculation result from backgroundLRUPoolLevels argument.
 pref("hal.processPriorityManager.gonk.enableOOBPKiller", true);
  
-
-pref("hal.processPriorityManager.gonk.MASTER.KillUnderKB", 1024);
+pref("hal.processPriorityManager.gonk.MASTER.OomScoreAdjust", -1000);
 
 pref("hal.processPriorityManager.gonk.FOREGROUND_HIGH.KillUnderKB", 2048);
 
