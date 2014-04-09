@@ -77,7 +77,11 @@ export GAIA_DISTRIBUTION_DIR=$(PWD)/device/sprd/sp6821a_gonk/
 export GAIA_APP_SRCDIRS=apps external-apps outoftree_apps customize_apps/engmode/assets customize_apps/ValidationTools/assets
 export PRODUCTION=1
 export MOZILLA_OFFICIAL=1
+
+ifneq ( $(TARGET_BUILD_VARIANT),user)
 export NOFTU=1
+endif
+
 export LOCALE_BASEDIR=$(PWD)/gaia-l10n/
 export LOCALES_FILE=$(PWD)/device/sprd/sp6821a_gonk/languages.json
 export GAIA_DEFAULT_LOCALE=en-US
