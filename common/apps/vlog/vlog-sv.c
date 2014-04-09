@@ -30,8 +30,7 @@
 #define LOG_TAG "vlog-sv"
 #include <cutils/log.h>
 
-//#define LOG_SERVER	"192.168.42.129"
-#define LOG_SERVER	"192.168.0.1"
+#define LOG_SERVER	"192.168.42.129"
 #define PORT_NUM 36667        /* Port number for server */
 
 #define BACKLOG 50
