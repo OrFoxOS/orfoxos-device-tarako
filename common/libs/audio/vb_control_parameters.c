@@ -89,6 +89,7 @@ typedef struct Open_hal
 typedef struct {
 	unsigned short adc_pga_gain_l;
 	unsigned short adc_pga_gain_r;
+    unsigned short pa_setting;
     uint32_t fm_pga_gain_l;
     uint32_t fm_pga_gain_r;
 	uint32_t dac_pga_gain_l;
@@ -356,16 +357,19 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
         ALOGE("%s pga_gain_nv NULL",__func__);
         return -1;
     }
+    struct mixer_ctl* spkvolume = mixer_get_ctl_by_name(adev->mixer, "Inter PA Playback Volume");
     if(pga_gain_nv->devices & AUDIO_DEVICE_OUT_EARPIECE){
         audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_l,"earpiece");
     }
     if((pga_gain_nv->devices & AUDIO_DEVICE_OUT_SPEAKER) && ((pga_gain_nv->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) || (pga_gain_nv->devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE))){
         audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_l,"headphone-spk-l");
         audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_r,"headphone-spk-r");
+        mixer_ctl_set_value(spkvolume, 0, pga_gain_nv->pa_setting);
     }else{
         if(pga_gain_nv->devices & AUDIO_DEVICE_OUT_SPEAKER){
             audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_l,"speaker-l");
             audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_r,"speaker-r");
+            mixer_ctl_set_value(spkvolume, 0, pga_gain_nv->pa_setting);
         }
         if((pga_gain_nv->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) || (pga_gain_nv->devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)){
     	    audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_l,"headphone-l");
@@ -489,6 +493,9 @@ static void SetCall_VolumePara(struct tiny_audio_device *adev,paras_mode_gain_t 
 	pga_gain_nv.adc_pga_gain_r= (mode_gain_paras->adc_gain & 0xff00) >> 8;
 	pga_gain_nv.dac_pga_gain_l= mode_gain_paras->dac_gain & 0x000000ff;
 	pga_gain_nv.dac_pga_gain_r= (mode_gain_paras->dac_gain & 0x0000ff00) >> 8;
+    pga_gain_nv.pa_setting = mode_gain_paras->pa_setting;
+
+    ALOGE(":SetCall_VolumePara pga_gain_nv.pa_setting %d",pga_gain_nv.pa_setting);
 
 	ret = SetAudio_gain_by_devices(adev,&pga_gain_nv);
     if(ret < 0){
@@ -810,7 +817,7 @@ RESTART:
             {
             case VBC_CMD_HAL_OPEN:
             {
-                MY_TRACE("VBC_CMD_HAL_OPEN IN.");
+                ALOGE(":VBC_CMD_HAL_OPEN IN.");
                 ALOGW("VBC_CMD_HAL_OPEN, try lock");
                 pthread_mutex_lock(&adev->lock);
                 ALOGW("VBC_CMD_HAL_OPEN, got lock");
@@ -837,7 +844,7 @@ RESTART:
             break;
             case VBC_CMD_HAL_CLOSE:
             {
-                MY_TRACE("VBC_CMD_HAL_CLOSE IN.");
+                ALOGE(":VBC_CMD_HAL_CLOSE IN.");
                 adev->call_prestop = 1;
                 write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;     //ask cp to read vaudio data, "call_prestop" will stop to write pcm data again.
                 WriteParas_Head(s_vbpipe_fd, &write_common_head);
@@ -864,7 +871,7 @@ RESTART:
             break;
             case VBC_CMD_SET_MODE:
             {
-                MY_TRACE("VBC_CMD_SET_MODE IN.");
+                ALOGE(":VBC_CMD_SET_MODE IN.");
                 ret = SetParas_Route_Incall(s_vbpipe_fd,adev);
                 if(ret < 0){
                     MY_TRACE("VBC_CMD_SET_MODE SetParas_Route_Incall error.s_is_exit:%d ",s_is_exit);
@@ -875,7 +882,7 @@ RESTART:
             break;
             case VBC_CMD_SET_GAIN:
             {
-                MY_TRACE("VBC_CMD_SET_GAIN IN.");
+                ALOGE(":VBC_CMD_SET_GAIN IN.");
                 ret = SetParas_Volume_Incall(s_vbpipe_fd,adev);
                 if(ret < 0){
                     MY_TRACE("VBC_CMD_SET_GAIN SetParas_Route_Incall error.s_is_exit:%d ",s_is_exit);
@@ -886,7 +893,7 @@ RESTART:
             break;
             case VBC_CMD_SWITCH_CTRL:
             {
-                MY_TRACE("VBC_CMD_SWITCH_CTRL IN.");
+                ALOGE(":VBC_CMD_SWITCH_CTRL IN.");
                 ret = SetParas_Switch_Incall(s_vbpipe_fd,adev);
                 if(ret < 0){
                     MY_TRACE("VBC_CMD_SWITCH_CTRL SetParas_Switch_Incall error.s_is_exit:%d ",s_is_exit);
@@ -907,7 +914,7 @@ RESTART:
             break;
             case VBC_CMD_DEVICE_CTRL:
             {
-                MY_TRACE("VBC_CMD_DEVICE_CTRL IN.");
+                ALOGE(":VBC_CMD_DEVICE_CTRL IN.");
                 ret = SetParas_DeviceCtrl_Incall(s_vbpipe_fd,adev);
                 if(ret < 0){
                     MY_TRACE("VBC_CMD_DEVICE_CTRL SetParas_DeviceCtrl_Incall error.s_is_exit:%d ",s_is_exit);
