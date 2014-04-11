@@ -80,6 +80,8 @@ export MOZILLA_OFFICIAL=1
 
 ifneq ( $(TARGET_BUILD_VARIANT),user)
 export NOFTU=1
+else
+export NOFTU=0
 endif
 
 export LOCALE_BASEDIR=$(PWD)/gaia-l10n/
