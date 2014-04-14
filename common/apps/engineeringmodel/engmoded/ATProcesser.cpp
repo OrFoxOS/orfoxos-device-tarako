@@ -51,10 +51,15 @@ string ATProcesser::process()
     memset(response,0,MAX_RESPONSE_LEN);
     const char *request = m_cmd.c_str();
     int requestlen = m_cmd.length();
-    cout << "cmd=" << m_cmd << endl;
+    string sims = HTTPRequest::URL::getParameter(m_url, "sim");
+    int sim = 0;
+    if (!sims.empty()){
+        sim = atoi(sims.c_str());
+    }
+    cout << "cmd=" << m_cmd << ",sim=" << sim << endl;
 #ifdef BUILD_ENG
     
-    eng_request((char *)request, requestlen, response, &responselen);
+    eng_request((char *)request, requestlen, response, &responselen, sim);
     content.append(response);   
 #endif
     cout << "response.content=" << content << endl;

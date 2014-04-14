@@ -637,7 +637,7 @@ int eng_appctest(void)
 
 #endif
 
-int eng_request(char *request, int requestlen, char *response, int *responselen)
+int eng_request(char *request, int requestlen, char *response, int *responselen, int sim)
 {
     //char cmdbuf[16];
     char *cmdbuf = request;
@@ -649,7 +649,7 @@ int eng_request(char *request, int requestlen, char *response, int *responselen)
 
     ENG_LOG("Run Engineer Mode PC2SERVER Client!\n");
 
-    fd = engapi_open(0);
+    fd = engapi_open(sim);
     if(fd<0) {
         ENG_LOG("ENG Open Failed!\n");
         //exit(-1);
