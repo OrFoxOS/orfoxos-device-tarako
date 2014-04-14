@@ -78,10 +78,10 @@ export GAIA_APP_SRCDIRS=apps external-apps outoftree_apps customize_apps/engmode
 export PRODUCTION=1
 export MOZILLA_OFFICIAL=1
 
-ifneq ( $(TARGET_BUILD_VARIANT),user)
-export NOFTU=1
-else
+ifeq ($(TARGET_BUILD_VARIANT), user)
 export NOFTU=0
+else
+export NOFTU=1
 endif
 
 export LOCALE_BASEDIR=$(PWD)/gaia-l10n/
