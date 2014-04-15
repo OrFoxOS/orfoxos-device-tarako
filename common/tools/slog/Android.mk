@@ -1,4 +1,5 @@
-ifneq ( $(TARGET_BUILD_VARIANT),user)
+ifeq ( $(TARGET_BUILD_VARIANT),user)
+else
 LOCAL_PATH:= $(call my-dir)
 
 #slog

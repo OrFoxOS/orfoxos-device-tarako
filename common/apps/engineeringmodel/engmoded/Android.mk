@@ -1,4 +1,3 @@
-ifneq ( $(TARGET_BUILD_VARIANT),user)
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -14,4 +13,3 @@ LOCAL_SHARED_LIBRARIES := libstlport libengclient
 LOCAL_MODULE_TAGS := optional
 include external/stlport/libstlport.mk
 include $(BUILD_EXECUTABLE)
-endif
