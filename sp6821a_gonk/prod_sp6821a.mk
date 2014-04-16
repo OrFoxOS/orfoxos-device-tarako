@@ -47,6 +47,8 @@ PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/sprd-keypad.kl:system/usr/keylayout/sprd-keypad.kl \
 	$(BOARDDIR)/ms-msg21xx.idc:system/usr/idc/ms-msg21xx.idc
 
+PRODUCT_COPY_FILES += $(BOARDDIR)/volume.cfg:system/etc/volume.cfg
+
 $(call inherit-product, frameworks/base/build/phone-hdpi-dalvik-heap.mk)
 
 # include classified configs

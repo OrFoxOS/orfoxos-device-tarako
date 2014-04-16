@@ -9,4 +9,4 @@
 ######################
 
 # Mounts the first usable partition of the specified device
-dev_mount sdcard /mnt/sdcard auto /devices/platform/sprd-sdhci.0/mmc_host/mmc0
+dev_mount extsdcard /mnt/sdcard auto /devices/platform/sprd-sdhci.0/mmc_host/mmc0

@@ -9,7 +9,9 @@ on early-init
 
 on fs
 #   mount_all /fstab.sp8810
-    setprop ro.crypto.fuse_sdcard true
+    # setprop ro.crypto.fuse_sdcard true
+    mkdir /mnt/internal-sdcard 0774 system system
+    mount yaffs2 mtd@media /mnt/internal-sdcard nosuid nodev
 
 on post-fs
     insmod /system/lib/modules/ump.ko
