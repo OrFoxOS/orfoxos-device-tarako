@@ -12,3 +12,10 @@ pref("hal.processPriorityManager.gonk.enableOOBPKiller", true);
 pref("geo.provider.use_mls", true);
 pref("geo.wifi.uri", "https://location.services.mozilla.com/v1/geolocate?key=%MOZ_MOZILLA_API_KEY%");
 pref("geo.cell.scan", true);
+
+pref("hal.processPriorityManager.gonk.MASTER.KillUnderKB", 1024);
+pref("hal.processPriorityManager.gonk.FOREGROUND_HIGH.KillUnderKB", 2048);
+pref("hal.processPriorityManager.gonk.FOREGROUND.KillUnderKB", 4096);
+pref("hal.processPriorityManager.gonk.BACKGROUND_PERCEIVABLE.KillUnderKB", 6144);
+pref("hal.processPriorityManager.gonk.BACKGROUND_HOMESCREEN.KillUnderKB", 16384);
+pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderKB", 20480);
