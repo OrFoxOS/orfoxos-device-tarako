@@ -1,5 +1,3 @@
-ifeq ( $(TARGET_BUILD_VARIANT),user)
-else
 LOCAL_PATH:= $(call my-dir)
 
 #slog
@@ -78,4 +76,3 @@ CUSTOM_MODULES += tar
 CUSTOM_MODULES += tcp
 CUSTOM_MODULES += slog.conf
 CUSTOM_MODULES += slog.conf.user
-endif
