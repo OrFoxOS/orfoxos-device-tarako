@@ -311,6 +311,7 @@ int parse_config()
 	int ret = 0;
 	char buffer[MAX_LINE_LEN];
 	struct stat st;
+	int user_conf = 0;
 
 	/* we use tmp log config file first */
 	if(stat(TMP_SLOG_CONFIG, &st)){
@@ -319,8 +320,16 @@ int parse_config()
 			err_log("mkdir %s failed.", TMP_FILE_PATH);
 			exit(0);
 		}
+		#if defined(SLOG_CONF_BY_BUILD_TYPE)
+		property_get("ro.build.type", buffer, "");
+		if (strcmp(buffer, "user") == 0)
+			user_conf = 1;
+		#else
 		property_get("ro.debuggable", buffer, "");
-		if (strcmp(buffer, "1") != 0) {
+		if (strcmp(buffer, "1") != 0)
+			user_conf = 1;
+		#endif
+		if (user_conf) {
 			if(!stat(DEFAULT_USER_SLOG_CONFIG, &st))
 				cp_file(DEFAULT_USER_SLOG_CONFIG, TMP_SLOG_CONFIG);
 			else {

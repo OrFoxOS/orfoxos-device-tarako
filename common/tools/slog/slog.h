@@ -91,6 +91,9 @@ enum {
 #define LOG_DIR_MAX_NUM 		5
 #define LOG_DIR_NUM 			1
 
+/*slog.conf.user or slog.conf , by ro.build.type*/
+#define SLOG_CONF_BY_BUILD_TYPE
+
 /* main data structure */
 struct slog_info {
 	struct slog_info	*next;
