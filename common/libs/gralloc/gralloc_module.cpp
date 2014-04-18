@@ -76,7 +76,7 @@ static int gralloc_register_buffer(gralloc_module_t const* module, buffer_handle
 	private_handle_t* hnd = (private_handle_t*)handle;
 	if (hnd->pid == getpid())
 	{
-		AERR("Unable to register handle 0x%x coming from different process: %d", (unsigned int)hnd, hnd->pid );
+	//	AERR("Unable to register handle 0x%x coming from different process: %d", (unsigned int)hnd, hnd->pid );
 		return 0;
 	}
 
@@ -271,7 +271,7 @@ static int gralloc_unregister_buffer(gralloc_module_t const* module, buffer_hand
 	}
 	else
 	{
-		AERR( "Trying to unregister buffer 0x%x from process %d that was not created in current process: %d", (unsigned int)hnd, hnd->pid, getpid());
+	//	AERR( "Trying to unregister buffer 0x%x from process %d that was not created in current process: %d", (unsigned int)hnd, hnd->pid, getpid());
 	}
 
 	return 0;
