@@ -10,5 +10,5 @@ pref("hal.processPriorityManager.gonk.enableOOBPKiller", true);
 
 // Geolocation configuration to use the Mozilla Location Service.
 pref("geo.provider.use_mls", true);
-pref("geo.wifi.uri", "https://location.services.mozilla.com/v1/geolocate?key=%MOZILLA_API_KEY%")
+pref("geo.wifi.uri", "https://location.services.mozilla.com/v1/geolocate?key=%MOZILLA_API_KEY%");
 pref("geo.cell.scan", true);
