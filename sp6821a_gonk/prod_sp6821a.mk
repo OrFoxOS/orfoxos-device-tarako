@@ -88,3 +88,4 @@ export LOCALE_BASEDIR=$(PWD)/gaia-l10n/
 export LOCALES_FILE=$(PWD)/device/sprd/sp6821a_gonk/languages.json
 export GAIA_DEFAULT_LOCALE=en-US
 export GAIA_KEYBOARD_LAYOUTS=en,bn-Avro,bn-Probhat
+export B2G_UPDATE_CHANNEL=release-spreadtrum
