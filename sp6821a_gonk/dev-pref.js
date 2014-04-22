@@ -12,3 +12,5 @@ pref("hal.processPriorityManager.gonk.enableOOBPKiller", true);
 pref("geo.provider.use_mls", true);
 pref("geo.wifi.uri", "https://location.services.mozilla.com/v1/geolocate?key=%MOZILLA_API_KEY%");
 pref("geo.cell.scan", true);
+
+pref("hal.processPriorityManager.gonk.BACKGROUND_HOMESCREEN.KillUnderKB", 16384);
