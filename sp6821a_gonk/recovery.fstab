@@ -7,10 +7,10 @@
 /misc 		mtd 		misc
 /boot		mtd		boot
 /recovery	mtd		recovery
-/fixnv		yaffs2		fixnv		no-checkpoint,no-rest-block
-/runtimenv		yaffs2		runtimenv		no-checkpoint,no-rest-block
-/backupfixnv		yaffs2		backupfixnv		no-checkpoint,no-rest-block
-/productinfo		yaffs2		productinfo		no-checkpoint,no-rest-block
+/fixnv		yaffs2		fixnv
+/runtimenv		yaffs2		runtimenv
+/backupfixnv		yaffs2		backupfixnv
+/productinfo		yaffs2		productinfo
 /intmemory      yaffs2          intmemory
 # added new fstypes
 /modem		mtd		modem
