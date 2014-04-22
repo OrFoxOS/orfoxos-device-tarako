@@ -3,6 +3,11 @@ MALI := libUMP libEGL_mali.so libGLESv1_CM_mali.so libGLESv2_mali.so libMali.so 
 
 #FFOS specific macros, may move into a new file someday
 ENABLE_LIBRECOVERY := true
+RECOVERY_EXTERNAL_STORAGE := /sdcard
+SYSTEM_FS_TYPE := yaffs2
+SYSTEM_PARTITION_TYPE := MTD
+SYSTEM_LOCATION := /dev/block/mtdblock11
+
 PRODUCT_PROPERTY_OVERRIDES := \
     ro.moz.omx.hw.max_width=720 \
     ro.moz.omx.hw.max_height=576 \
