@@ -16,3 +16,9 @@
 
 add_lunch_combo sp6821a_gonk-userdebug
 
+if [ -z "$JS_BINARY" -a -d "$PWD/device/sprd/common/tools/jsshell/" ]; then
+  JSSHELL_DIR=$PWD/device/sprd/common/tools/jsshell/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-$(uname -p | tr "[[:upper:]]" "[[:lower:]]")
+  if [ -d $JSSHELL_DIR ]; then
+    export JS_BINARY=$JSSHELL_DIR/js
+  fi
+fi
