@@ -65,10 +65,9 @@ PRODUCT_MODEL := sp6821a
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
 
-PRODUCT_LOCALES := zh_CN zh_TW en_US
-
+MOZ_PRODUCT_LOCALES := bn-BD
 # use woff font for ROM size
-MOZ_PRODUCT_COMPRESS_FONTS := true
+MOZ_PRODUCT_COMPRESS_FONTS := false
 
 # Gecko/Gaia need below export value
 # Using Mozilla API key to support MLS
