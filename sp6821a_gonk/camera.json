@@ -1,4 +1,7 @@
 {
    "maxImagePixelSize": 2097152,
-   "maxSnapshotPixelSize": 2097152
+   "maxSnapshotPixelSize": 1920000,
+   "maxGifImageFileSize": 1048576,
+   "maxPickPixelSize": 480000,
+   "maxEditPixelSize": 480000
 }
