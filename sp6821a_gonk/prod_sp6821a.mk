@@ -73,7 +73,11 @@ MOZ_PRODUCT_COMPRESS_FONTS := false
 
 # Gecko/Gaia need below export value
 # Using Mozilla API key to support MLS
+
+if [ -z "$MOZILLA_MLS_KEY_FILE" ]; then
 export MOZILLA_MLS_KEY_FILE=$(ANDROID_BUILD_TOP)/$(BOARDDIR)/mls.key
+fi
+
 export GAIA_DISTRIBUTION_DIR=$(PWD)/device/sprd/sp6821a_gonk/
 export GAIA_APP_SRCDIRS=apps external-apps outoftree_apps customize_apps/engmode/assets customize_apps/ValidationTools/assets
 export PRODUCTION=1
