@@ -20,3 +20,6 @@ ro.fm.chip.vendor=trout
 
 #if our product support single link version
 ro.system.property.singleconn=true
+
+#for emergency call
+ro.ril.ecclist=000,08,110,999,118,119,120,122,911,112
