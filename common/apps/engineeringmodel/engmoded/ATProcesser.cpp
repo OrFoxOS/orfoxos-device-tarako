@@ -54,6 +54,9 @@ string ATProcesser::process()
     char response[MAX_RESPONSE_LEN];
     int responselen = 0;
     memset(response,0,MAX_RESPONSE_LEN);
+    if (m_cmd.find("AT") == 0){
+        m_cmd = "39,1," + m_cmd;
+    }
     const char *request = m_cmd.c_str();
     int requestlen = m_cmd.length();
     string sims = HTTPRequest::URL::getParameter(m_url, "sim");
