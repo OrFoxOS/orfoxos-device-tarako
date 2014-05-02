@@ -233,6 +233,8 @@ void *eng_vdiag_thread(void *x)
 //				exit(1);
                 return NULL;
 			}
+		        sleep(1);
+	                continue;
 
 		}
 		ret=0;
