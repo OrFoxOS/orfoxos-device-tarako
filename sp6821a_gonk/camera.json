@@ -3,6 +3,5 @@
    "maxSnapshotPixelSize": 1920000,
    "maxGifImageFileSize": 1048576,
    "maxPickPixelSize": 480000,
-   "maxEditPixelSize": 480000,
-   "requiredEXIFPreviewSize": { "width": 320, "height": 240 }
+   "maxEditPixelSize": 480000
 }
