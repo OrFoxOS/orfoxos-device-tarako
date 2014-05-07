@@ -810,7 +810,6 @@ void eng_check_factorymode_fornand(void)
 		if(fd > 0)
 			close(fd);
         property_set_check("persist.sys.usb.config","mass_storage,adb,vser,gser");
-        property_set_check("sys.usb.config","mass_storage,adb,vser,gser");
 	} else {
 		remove(ENG_FACOTRYMODE_FILE);
 	}
