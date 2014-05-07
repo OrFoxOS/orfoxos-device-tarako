@@ -16,10 +16,9 @@
 //#endif
 
 
-//#define MY_DEBUG
-
+#define MY_DEBUG
 #ifdef MY_DEBUG
-#define MY_TRACE    ALOGW
+#define MY_TRACE    ALOGE
 #else
 #define MY_TRACE(...)
 #endif
@@ -873,7 +872,9 @@ RESTART:
                     s_is_exit = 1;
                 }
                 ALOGW("START CALL,open pcm device...");
+                pthread_mutex_lock(&adev->device_lock);
                 adev->call_start = 1;
+                pthread_mutex_unlock(&adev->device_lock);
                 SetParas_OpenHal_Incall(s_vbpipe_fd);   //get sim card number
                 pthread_mutex_unlock(&adev->lock);
                 MY_TRACE("VBC_CMD_HAL_OPEN OUT.");
@@ -958,6 +959,8 @@ RESTART:
                     s_is_exit = 1;
                 }
                 MY_TRACE("VBC_CMD_DEVICE_CTRL OUT.");
+                struct mixer_ctl* ctl = mixer_get_ctl_by_name(adev->mixer, "Mic Function");
+                mixer_ctl_set_value(ctl, 0, 1);
             }
             break;
             default:

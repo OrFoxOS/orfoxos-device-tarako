@@ -219,6 +219,7 @@ struct tiny_audio_device {
     bool eq_available;
 
     struct stream_routing_manager  routing_mgr;
+    pthread_mutex_t               device_lock;
 };
 
 struct tiny_stream_out {
@@ -354,7 +355,6 @@ static int out_dump_release(FILE **fd);
 
 #include "at_commands_generic.c"
 #include "mmi_audio_loop.c"
-
 
 static int out_dump_create(FILE **out_fd, const char *path)
 {
@@ -497,6 +497,12 @@ static void do_select_devices(struct tiny_audio_device *adev)
 
     if(adev->eq_available)
         vb_effect_sync_devices(cur_devices);
+    pthread_mutex_lock(&adev->device_lock);
+
+    if(adev->call_start == 1){
+        pthread_mutex_unlock(&adev->device_lock);
+        return ;
+    }
 
     /* disable old ones. */
     for (i = 0; i < adev->num_dev_cfgs; i++)
@@ -542,6 +548,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
 #ifndef _VOICE_CALL_VIA_LINEIN
     SetAudio_gain_route(adev,1);
 #endif
+    pthread_mutex_unlock(&adev->device_lock);
 }
 
 static void select_devices_signal(struct tiny_audio_device *adev)
