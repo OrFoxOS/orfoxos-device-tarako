@@ -105,6 +105,7 @@ void *eng_vlog_thread(void *x)
 		r_cnt = read(pipe_fd, log_data, DATA_BUF_SIZE);
 		if (r_cnt < 0) {
 			ENG_LOG("no log data :%d\n", r_cnt);
+			sleep(1);
 			continue;
 		}
 
