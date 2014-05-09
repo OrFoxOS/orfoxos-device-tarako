@@ -148,7 +148,7 @@ struct pcm_config pcm_config_vrec_vx = {    //voice record in vlx mode
 
 
 struct pcm_config pcm_config_vplayback = {
-    .channels = 1,
+    .channels = 2,
     .rate = VX_NB_SAMPLING_RATE,
     .period_size = 320,
     .period_count = 8,
