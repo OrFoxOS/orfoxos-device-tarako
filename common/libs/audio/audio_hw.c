@@ -218,6 +218,8 @@ struct tiny_audio_device {
     struct audio_pga *pga;
     bool eq_available;
 
+    int codec_mute;
+
     struct stream_routing_manager  routing_mgr;
     pthread_mutex_t               device_lock;
 };
@@ -486,6 +488,53 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,
     return 0;
 }
 
+void codec_mute_set(struct tiny_audio_device *adev)
+{
+    if(adev->codec_mute == 1){
+       struct mixer_ctl* ctl = NULL;
+
+       ctl =mixer_get_ctl_by_name(adev->mixer, "Speaker Mute");
+       if(ctl)
+           mixer_ctl_set_value(ctl, 0, adev->codec_mute);
+       else
+           ALOGE("Speaker Mute error");
+
+       ctl = mixer_get_ctl_by_name(adev->mixer, "Earpiece Mute");
+       if(ctl)
+           mixer_ctl_set_value(ctl, 0, adev->codec_mute);
+       else
+           ALOGE("Earpiece Mute error");
+
+       ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
+       if(ctl)
+           mixer_ctl_set_value(ctl, 0, adev->codec_mute);
+       else
+           ALOGE("HeadPhone Mute error");
+
+       } else if (adev->codec_mute == 0){
+           struct mixer_ctl* ctl = NULL;
+
+           ctl = mixer_get_ctl_by_name(adev->mixer, "Speaker Mute");
+           if(ctl)
+               mixer_ctl_set_value(ctl, 0, adev->codec_mute);
+           else
+               ALOGE("Speaker Mute error");
+
+           ctl = mixer_get_ctl_by_name(adev->mixer, "Earpiece Mute");
+           if(ctl)
+               mixer_ctl_set_value(ctl, 0, adev->codec_mute);
+           else
+               ALOGE("Earpiece Mute error");
+
+           ctl = mixer_get_ctl_by_name(adev->mixer, "HeadPhone Mute");
+           if(ctl)
+               mixer_ctl_set_value(ctl, 0, adev->codec_mute);
+           else
+               ALOGE("HeadPhone Mute error");
+       }
+
+}
+
 /* Must be called with route_lock */
 static void do_select_devices(struct tiny_audio_device *adev)
 {
@@ -503,6 +552,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
         pthread_mutex_unlock(&adev->device_lock);
         return ;
     }
+    codec_mute_set(adev);
 
     /* disable old ones. */
     for (i = 0; i < adev->num_dev_cfgs; i++)
@@ -949,9 +999,27 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     int ret, val = 0;
     static int cur_mode = 0;
 
-    BLUE_TRACE("[out_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
-
     parms = str_parms_create_str(kvpairs);
+
+    //BLUE_TRACE("[out_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
+
+    ret = str_parms_get_str(parms, "Mute_Codec", value, sizeof(value));
+    if (ret >= 0) {
+        pthread_mutex_lock(&adev->lock);
+        if ((strcmp(value, "true") == 0)&&(adev->codec_mute != 1)) {
+            //if now in real call we do nothing
+            ALOGE("Mute_Codec true");
+            adev->codec_mute = 1;
+            select_devices_signal(adev);
+        } else if ((strcmp(value, "false") == 0)&&(adev->codec_mute != 0)) {
+            ALOGE("Mute_Codec false");
+            adev->codec_mute = 0;
+            select_devices_signal(adev);
+        }
+        pthread_mutex_unlock(&adev->lock);
+        return ret;
+    }
+    BLUE_TRACE("[out_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (ret >= 0) {
@@ -984,6 +1052,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->devices,val);
         }
     }
+
+
+
 
     ALOGW("out_set_parameters out...call_start:%d",adev->call_start);
     str_parms_destroy(parms);
@@ -1034,7 +1105,7 @@ static bool out_bypass_data(struct tiny_stream_out *out,uint32_t frame_size, uin
 static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
                          size_t bytes)
 {
-    int ret;
+    int ret = -1;
     struct tiny_stream_out *out = (struct tiny_stream_out *)stream;
     struct tiny_audio_device *adev = out->dev;
     size_t frame_size = 0;
