@@ -715,6 +715,9 @@ static void *eng_atauto_thread(void *par)
 						usb_status = 0;
 					}
 				}
+			} else {
+    			usleep(1000*1000);
+    			ENG_LOG("%s: read error %d\n",__func__, n);
 			}
 		} else {
 			usleep(500*1000);
