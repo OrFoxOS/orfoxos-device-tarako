@@ -540,6 +540,7 @@ static void *eng_pcclient_hdlr(void *_param)
 {
 	char databuf[ENG_BUFFER_SIZE];
 	char readbuf[ENG_BUFFER_SIZE];
+	char prev_resp_buf[ENG_BUFFER_SIZE];
 	int resp_len;
 	int length = 0;
 	int length_read = 0;
@@ -547,7 +548,6 @@ static void *eng_pcclient_hdlr(void *_param)
 	int fd, ret;
 	int status;
 	int i,total;
-	char* prev_resp_buf=NULL;
 	int prev_len = 0;
 
 
@@ -620,17 +620,12 @@ static void *eng_pcclient_hdlr(void *_param)
 							//		prev_resp_buf,databuf);
 							if (i==0){
 								prev_len = resp_len;
-								prev_resp_buf = (char*)malloc(prev_len+1);
 								memset(prev_resp_buf,0,prev_len+1);
 								memcpy(prev_resp_buf,databuf,prev_len);
 							}
 							else{
 								eng_multicmds_modem2pc(pc_client_fd,
 										prev_resp_buf, prev_len, databuf, resp_len);
-								if (prev_resp_buf){
-									free(prev_resp_buf);
-									prev_resp_buf=NULL;
-								}
 							}
 						}else{
 							eng_modem2pc(pc_client_fd, databuf, resp_len);
@@ -731,8 +726,8 @@ static void *eng_atauto_thread(void *par)
 					}
 				}
 			} else {
-    			usleep(1000*1000);
-    			ENG_LOG("%s: read error %d\n",__func__, n);
+			usleep(1000*1000);
+			ENG_LOG("%s: read error %d\n",__func__, n);
 			}
 		} else {
 			usleep(500*1000);
