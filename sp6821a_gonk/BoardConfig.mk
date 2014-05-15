@@ -94,8 +94,6 @@ USE_RGB_VIDEO_LAYER :=true
 
 USE_BOOT_AT_DIAG := true
 
-USE_ENG_UART_USB_AUTO := true
-
 #light sensor
 BOARD_HAVE_TMD2771 := true
 

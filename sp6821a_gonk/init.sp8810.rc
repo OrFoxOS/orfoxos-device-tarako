@@ -77,9 +77,9 @@ service zram /system/xbin/zram.sh
         disabled
         oneshot
 
-#service mfserial /system/bin/mfserial ts0710mux9 ttyS1 1
-#    class main
-#    user root
+service mfserial /system/bin/mfserial ts0710mux9 ttyS1 1
+    class main
+    user root
 
 service vcharged /bin/vcharged
     class core
