@@ -67,7 +67,7 @@ PRODUCT_MODEL := sp6821a
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
 
-MOZ_PRODUCT_LOCALES := bn-BD
+MOZ_PRODUCT_LOCALES := bn-BD zh-CN
 # use woff font for ROM size
 MOZ_PRODUCT_COMPRESS_FONTS := false
 
