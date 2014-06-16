@@ -960,9 +960,11 @@ RESTART:
                     MY_TRACE("VBC_CMD_DEVICE_CTRL SetParas_DeviceCtrl_Incall error.s_is_exit:%d ",s_is_exit);
                     s_is_exit = 1;
                 }
-                MY_TRACE("VBC_CMD_DEVICE_CTRL OUT.");
+                ALOGE("wangzuo:before set mic");
                 struct mixer_ctl* ctl = mixer_get_ctl_by_name(adev->mixer, "Mic Function");
                 mixer_ctl_set_value(ctl, 0, 1);
+                ALOGE("wangzuo:after set mic");
+                MY_TRACE("VBC_CMD_DEVICE_CTRL OUT.");
             }
             break;
             default:
