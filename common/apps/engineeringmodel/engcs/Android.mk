@@ -172,6 +172,7 @@ LOCAL_MODULE := engpcclient
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
 
+ifeq ($(BOARD_WLAN_DEVICE),itm)
 #ENG RF NV CONFIG
 CAL_PATH := $(call my-dir)
 
@@ -203,7 +204,7 @@ LOCAL_SRC_FILES     := eng_rf_nv_update.c   \
 LOCAL_MODULE := eng_rf_nv_update  
 LOCAL_MODULE_TAGS := optional  
 include $(BUILD_EXECUTABLE)  
-
+endif
     
 #ENG SETBTWIFI ADDR
 CAL_PATH := $(call my-dir)
