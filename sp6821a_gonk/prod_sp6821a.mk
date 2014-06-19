@@ -87,6 +87,7 @@ ifeq ($(TARGET_BUILD_VARIANT), user)
 export NOFTU=0
 else
 export NOFTU=1
+export DEVICE_DEBUG=1
 endif
 
 export LOCALE_BASEDIR=$(PWD)/gaia-l10n/
