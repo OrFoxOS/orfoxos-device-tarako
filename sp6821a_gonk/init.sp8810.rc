@@ -83,7 +83,7 @@ service mfserial /system/bin/mfserial ts0710mux9 ttyS1 1
 
 service vcharged /bin/vcharged
     class core
-    user system
+    user root
     group system
     oneshot
 
