@@ -10,4 +10,3 @@ pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderKB", 18432);
 pref("hal.processPriorityManager.gonk.PREALLOC.OomScoreAdjust", 267);
 
 pref("image.mem.max_decoded_image_kb", 14400);
-pref("general.useragent.override.m.facebook.com", "Mozilla/5.0 (Tarako; rv:28.0) Gecko/28.0 Firefox/28.0");
