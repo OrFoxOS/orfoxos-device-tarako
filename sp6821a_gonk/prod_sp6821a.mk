@@ -67,7 +67,7 @@ PRODUCT_MODEL := sp6821a
 PRODUCT_BRAND := Spreadtrum
 PRODUCT_MANUFACTURER := Spreadtrum
 
-MOZ_PRODUCT_LOCALES := bn-BD zh-CN
+MOZ_PRODUCT_LOCALES := bn-BD
 # use woff font for ROM size
 MOZ_PRODUCT_COMPRESS_FONTS := false
 
@@ -87,7 +87,7 @@ ifeq ($(TARGET_BUILD_VARIANT), user)
 export NOFTU=0
 else
 export NOFTU=1
-export DEVICE_DEBUG=1
+#export DEVICE_DEBUG=1
 endif
 
 export LOCALE_BASEDIR=$(PWD)/gaia-l10n/
