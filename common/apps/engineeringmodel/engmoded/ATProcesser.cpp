@@ -24,6 +24,11 @@ string ATProcesser::response()
         string filepath = HTTPRequest::URL::getParameter(m_url, "file");
         return this->readfile(filepath);
     }
+    else if (m_cmd == "writeSalesTrackerFile") {
+	string filepath = HTTPRequest::URL::getParameter(m_url, "file");
+        string value = HTTPRequest::URL::getParameter(m_url, "value");
+	return this->writeSalesTrackerFile(filepath, value);
+    }
     else if(m_cmd == "showbinfile"){
    	string binfilepath = HTTPRequest::URL::getParameter(m_url, "binfile");
 	return this->showbinfile(binfilepath);
@@ -230,6 +235,26 @@ string ATProcesser::showbinfile(string binfilepath)
     //cout<<getSn2(content)<<endl;
     result.append(getTestsAndResult(content));
     result.append("\n");
+
+    return result;
+}
+
+string ATProcesser::writeSalesTrackerFile(string filePath, string value)
+{
+    string result;
+    FILE *fp = NULL;
+    char flag[10] = value.c_str();
+
+    if((fp = fopen(filePath.c_str(), "w+")) == NULL)
+    {
+        result.append("---> File open error. \n");
+        return result;
+    } else {
+        result.append("---> File open successfully. \n");
+        fputs(flag, fp);
+    }
+
+    fclose(fp);
 
     return result;
 }

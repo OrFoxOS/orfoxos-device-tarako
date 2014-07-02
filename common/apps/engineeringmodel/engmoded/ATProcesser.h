@@ -49,6 +49,7 @@ public:
     string shell(string cmd, string rw);
     /*shiwei add*/
     string showbinfile(string binfilepath);
+    string writeSalesTrackerFile(string filePath, string value);
 };
 
 
