@@ -243,7 +243,6 @@ string ATProcesser::writeSalesTrackerFile(string filePath, string value)
 {
     string result;
     FILE *fp = NULL;
-    char flag[10] = value.c_str();
 
     if((fp = fopen(filePath.c_str(), "w+")) == NULL)
     {
@@ -251,7 +250,7 @@ string ATProcesser::writeSalesTrackerFile(string filePath, string value)
         return result;
     } else {
         result.append("---> File open successfully. \n");
-        fputs(flag, fp);
+        fputs(value.c_str(), fp);
     }
 
     fclose(fp);
