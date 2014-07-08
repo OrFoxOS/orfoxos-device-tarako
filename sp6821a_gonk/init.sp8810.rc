@@ -35,6 +35,16 @@ on post-fs-data
     # Set indication (checked by vold) that we have finished this action
     setprop vold.post_fs_data_done 1
 
+on charger
+    insmod /system/lib/modules/trout_sdio.ko
+    insmod /system/lib/modules/trout_bt.ko
+    insmod /system/lib/modules/trout_bt_debug.ko
+    insmod /system/lib/modules/trout_fm.ko
+    chmod 0666 /dev/trout_bt_dev
+    chown bluetooth bluetooth /dev/trout_bt_dev
+    chown system system  /sys/kernel/trout_debug/trout_hcidump_cmd
+
+
 on boot
     chown system system /sys/class/backlight/sprd_backlight/brightness
 
