@@ -8,5 +8,5 @@ pref("geo.cell.scan", true);
 
 pref("hal.processPriorityManager.gonk.BACKGROUND.KillUnderKB", 18432);
 pref("hal.processPriorityManager.gonk.PREALLOC.OomScoreAdjust", 267);
-pref("hal.processPriorityManager.gonk.notifyLowMemUnderKB", 8192);
+
 pref("image.mem.max_decoded_image_kb", 14400);
