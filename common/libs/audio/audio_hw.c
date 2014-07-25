@@ -1017,6 +1017,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             select_devices_signal(adev);
         }
         pthread_mutex_unlock(&adev->lock);
+        str_parms_destroy(parms);
         return ret;
     }
     BLUE_TRACE("[out_set_parameters], kvpairs=%s devices:0x%x mode:%d ", kvpairs,adev->devices,adev->mode);
@@ -1043,6 +1044,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 ret = at_cmd_route(adev);  //send at command to cp
                 if (ret < 0) {
                     ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
+                    str_parms_destroy(parms);
                     return ret;
                 }
             }
