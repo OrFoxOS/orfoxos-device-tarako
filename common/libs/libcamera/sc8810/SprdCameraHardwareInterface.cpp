@@ -246,6 +246,7 @@ bool SprdCameraHardware::startCameraIfNecessary()
                         return false;
                 }
                 ALOGV("OK to camera_start.");
+
                 while(mCameraState != QCS_IDLE && mCameraState != QCS_ERROR) {
                         ALOGV("init camera: waiting for QCS_IDLE");
                         mStateWait.wait(mStateLock);
@@ -1032,13 +1033,13 @@ status_t SprdCameraHardware::takePicture()
         // It's possible for the YUV callback as well as the JPEG callbacks
         // to be invoked before we even make it here, so we check for all
         // possible result states from takePicture.
-
         while (mCameraState != QCS_WAITING_RAW &&
                mCameraState != QCS_WAITING_JPEG &&
                mCameraState != QCS_IDLE &&
                mCameraState != QCS_ERROR)  {
             ALOGV("takePicture: waiting for QCS_WAITING_RAW or QCS_WAITING_JPEG");
-            mStateWait.wait(mStateLock);
+            //mStateWait.wait(mStateLock);
+            mStateWait.waitRelative(mStateLock, 1000*1000);
             ALOGV("takePicture: woke up, state is %s",
                  getCameraStateStr(mCameraState));
         }
