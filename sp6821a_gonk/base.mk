@@ -55,8 +55,7 @@ PRODUCT_PACKAGES := \
 	bttest\
 	calibration_init \
 	nvm_daemon \
-	modemd \
-	mfserial
+	modemd
 
 # own copyright packages files
 PRODUCT_PACKAGES += \
