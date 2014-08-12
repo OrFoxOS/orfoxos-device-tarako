@@ -93,6 +93,9 @@ PRODUCT_PACKAGES += \
 	fm.$(TARGET_PLATFORM) \
 	trout_genpskey
 
+PRODUCT_PACKAGES += \
+	iperf
+
 PRODUCT_COPY_FILES := \
 	$(BOARDDIR)/init.rc:root/init.rc \
 	$(BOARDDIR)/init.sp8810.rc:root/init.sp8810.rc \
