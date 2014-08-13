@@ -635,6 +635,12 @@ status_t SprdCameraHardware::startPreviewInternal()
                 ALOGV("mLock:startPreview E.\n");             
                 return NO_ERROR;
         }
+        //Add by Dafeng, for the sprd bug 342467
+        if (mCameraState != QCS_IDLE) {
+            ALOGE("When startPreview, Camera state is %s, expecting QCS_IDLE!",
+            getCameraStateStr(mCameraState));           
+            return INVALID_OPERATION;
+        }
 
         // We check for these two states explicitly because it is possible
         // for startPreview() to be called in response to a raw or JPEG
@@ -642,7 +648,6 @@ status_t SprdCameraHardware::startPreviewInternal()
         // or QCS_WAITING_JPEG to QCS_IDLE.  This is because in camera_cb(),
         // we update the state *after* we've made the callback.  See that
         // function for an explanation.
-
         if (mCameraState == QCS_WAITING_RAW ||
                 mCameraState == QCS_WAITING_JPEG) {
                 while (mCameraState != QCS_IDLE &&
